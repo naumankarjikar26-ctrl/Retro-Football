@@ -63,7 +63,8 @@ export class HUDScene extends Phaser.Scene {
     const cx = Math.round(aim.cx);
     const cy = Math.round(aim.cy);
     const power = info?.power ?? 0;
-    const col = info?.cancelled ? PAL.silver : power >= 1 ? PAL.orange : PAL.white;
+    // blue = your pull (distinct from the white/orange landing marker on the field)
+    const col = info?.cancelled ? PAL.silver : power >= 1 ? PAL.cyan : PAL.sky;
 
     // line from the press point to the finger
     const steps = Math.max(1, Math.round(Math.hypot(cx - sx, cy - sy)));
@@ -83,6 +84,9 @@ export class HUDScene extends Phaser.Scene {
         g.fillRect(Math.round(sx + Math.cos(ang) * r) + o, Math.round(sy + Math.sin(ang) * r) + o, 1, 1);
       }
     }
+    // solid centre dot marks exactly where you pressed
+    g.fillStyle(PAL.ink, 1).fillRect(sx - 1, sy - 1, 4, 4);
+    g.fillStyle(col, 1).fillRect(sx - 1, sy - 1, 3, 3);
     // finger dot
     g.fillStyle(PAL.ink, 1).fillRect(cx - 1, cy - 1, 4, 4);
     g.fillStyle(col, 1).fillRect(cx - 1, cy - 1, 3, 3);
