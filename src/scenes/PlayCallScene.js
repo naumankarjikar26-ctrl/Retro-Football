@@ -137,9 +137,9 @@ export class PlayCallScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0x2f7a45, 1).fillRect(x, y, w, h);
     const form = OFFENSE_FORMATIONS[play.formation].players;
+    const sx = Math.max(2.1, (w - 46) / 42); // px per yard downfield (fills big previews too)
     const losX = x + Math.round(Math.min(w * 0.3, 16 * sx));
     g.fillStyle(PAL.sky, 1).fillRect(losX, y, 1, h);
-    const sx = Math.max(2.1, (w - 46) / 42); // px per yard downfield (fills big previews too)
     const sy = h / 46;         // px per yard sideline-to-sideline (~46 yd shown)
     const px = (depth) => losX - depth * sx;
     const py = (lat) => y + h / 2 + lat * sy;
