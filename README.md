@@ -99,7 +99,7 @@ the ball to go. The pull is measured from the spot you first pressed:
 
 **Running with the ball:** after a catch or handoff, the ball carrier runs
 straight downfield on his own. Each press of up or down (or a tap above or
-below him) cuts him about 3.5 yards over (`cutYards` in
+below him) cuts him about 5 yards over (`cutYards` in
 `src/config/constants.js`).
 
 ## Catching
