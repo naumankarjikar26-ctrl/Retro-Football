@@ -109,10 +109,11 @@ def stance_frame(idle, row, kind, arm=(0xAC3232, 0x6E2025)):
     fwd = FORWARD_X[DIRS[row]]
     # how much to drop the upper body (legs bend) and lean it forward
     drop, lean, hand_down = {
-        '3pt': (8, 4, True),
-        '2pt': (4, 2, False),
-        'crouch': (5, 0, False),
-        'qb': (3, 1, False),
+        # shallow drops so stance players read the same size as after the snap
+        '3pt': (3, 4, True),
+        '2pt': (1, 2, False),
+        'crouch': (2, 1, False),
+        'qb': (1, 1, False),
     }[kind]
     top = opaque[0]
     for y in range(F):
