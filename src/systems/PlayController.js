@@ -11,7 +11,7 @@
 import {
   TUNING, PX_PER_YARD, FIELD_TOP, FIELD_BOTTOM, WORLD_W, WORLD_H, SIDELINE_MARGIN_YD, yd, ydLat, toYards, yardToX, xToYard,
   latToY, yToLat,
-  gdist, groundLen,
+  gdist, groundLen, LAT_SCALE,
 } from '../config/constants.js';
 import { OFFENSE_FORMATIONS, DEFENSE_FORMATIONS } from '../plays/formations.js';
 import { buildRoute } from '../plays/routes.js';
@@ -149,6 +149,7 @@ export class PlayController {
    *   dx/dy: keyboard direction (-1..1, right = downfield). steerY: world y the pointer steers toward.
    */
   update(dt, input) {
+    if (this.hitStop > 0) { this.hitStop -= dt; return; } // impact freeze frames
     this.time += dt;
 
     this.updateControlled(input);
@@ -262,8 +263,9 @@ export class PlayController {
 
   /** Tackles, sacks, sidelines, goal lines. */
   checkCarrier() {
+    if (this.tackling) return;
     const c = this.phase === 'qb' ? this.qb : this.carrier;
-    if (!c || c.state === 'down') return;
+    if (!c || c.state === 'down' || c.state === 'tackled') return;
 
     if (this.phase === 'run' && c.x >= yardToX(100)) {
       c.stop();
@@ -279,20 +281,65 @@ export class PlayController {
       if (gdist(d, c) > radius) continue;
 
       if (this.phase === 'run' && Math.random() < TUNING.brokenTackleChance) {
-        d.ai.noTackleUntil = this.time + 0.8;
-        d.speedScale = 0.35;
-        this.scene.time.delayedCall(600, () => { d.speedScale = 1; });
+        this.brokenTackle(c, d);
         continue;
       }
-      // Tackle! Carrier is driven back a little in the tackler's direction.
-      const push = d.vel.clone().scale(0.35).add(c.vel.clone().scale(0.25));
-      c.goDown(push.x, push.y);
-      d.goDown(d.vel.x * 0.5, d.vel.y * 0.5);
-      if (this.ball.carrier === c) this.ball.holdBy(c);
-      bus.emit(EV.TACKLE, { carrier: c, tackler: d });
-      const sack = this.phase === 'qb';
-      return this.end(this.spotResult(c, { sack }));
+      return this.tackle(c, d);
     }
+  }
+
+  /** Whiff: the carrier stumbles and keeps going, the defender dives past and goes down. */
+  brokenTackle(c, d) {
+    d.ai.noTackleUntil = this.time + TUNING.tackleRetryDelay;
+    c.stumble(0.3);
+    // dive past in the direction he was moving
+    const len = Math.hypot(d.vel.x, d.vel.y) || 1;
+    const ux = d.vel.x / len;
+    const uy = d.vel.y / len;
+    this.scene.tweens.add({ targets: d, x: d.x + ux * yd(1.6), y: d.y + uy * yd(1.6) * LAT_SCALE, duration: 180, ease: 'Quad.Out' });
+    d.state = 'tackled';
+    this.scene.time.delayedCall(60, () => d.tipOver(ux, 200));
+    this.scene.time.delayedCall(1000, () => { if (d.active && d.state === 'down') d.getUp(); });
+    bus.emit(EV.BROKEN_TACKLE, { carrier: c, tackler: d });
+  }
+
+  /**
+   * Tackle sequence: lunge -> hit-pause + flash + shake -> knockback with the
+   * defender wrapped on -> both tip over together -> stay down -> play over.
+   */
+  tackle(c, d) {
+    const sack = this.phase === 'qb';
+    const result = this.spotResult(c, { sack });   // forward progress at contact
+    this.tackling = true;
+    this.controlled = null;
+    // direction of the hit (defender's motion, or from defender to carrier)
+    let hx = d.vel.x;
+    let hy = d.vel.y;
+    if (Math.hypot(hx, hy) < 1) { hx = c.x - d.x; hy = (c.y - d.y) / LAT_SCALE; }
+    const hl = Math.hypot(hx, hy) || 1;
+    hx /= hl; hy /= hl;
+    c.state = 'tackled';
+    d.state = 'tackled';
+    if (this.ball.carrier === c) this.ball.holdBy(c);
+    bus.emit(EV.TACKLE, { carrier: c, tackler: d });
+
+    const tw = this.scene.tweens;
+    // 1. lunge into the carrier
+    tw.add({ targets: d, x: c.x - hx * 5, y: c.y - hy * 5 * LAT_SCALE, duration: 70, ease: 'Quad.In', onComplete: () => {
+      // 2. impact: hit-pause, flash, shake
+      this.hitStop = 0.05;
+      this.scene.impactFlash?.((c.x + d.x) / 2, (c.y + d.y) / 2 - 12);
+      this.scene.cameras.main.shake(110, 0.004);
+      // 3. knockback a few pixels, defender wrapped on
+      const kx = hx * 7;
+      const ky = hy * 7 * LAT_SCALE;
+      tw.add({ targets: [c, d], x: `+=${kx}`, y: `+=${ky}`, duration: 160, delay: 50, ease: 'Quad.Out', onComplete: () => {
+        // 4. both go down together toward the hit
+        c.tipOver(hx, 280);
+        d.tipOver(hx, 300);
+        this.scene.time.delayedCall(700, () => this.end(result));
+      } });
+    } });
   }
 
   spotResult(c, extra) {

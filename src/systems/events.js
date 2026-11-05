@@ -10,6 +10,7 @@ export const EV = {
   CATCH: 'catch',               // ({ player })
   INCOMPLETE: 'incomplete',     // ({ reason })
   TACKLE: 'tackle',             // ({ carrier, tackler })
+  BROKEN_TACKLE: 'brokenTackle', // ({ carrier, tackler })
   PLAY_END: 'playEnd',          // (result)
   STATE: 'state',               // (gameState) down/distance/score changed
   HINT: 'hint',                 // (text) contextual control hint

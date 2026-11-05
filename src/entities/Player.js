@@ -96,7 +96,10 @@ export class Player extends Phaser.GameObjects.Sprite {
   }
 
   update(dt) {
-    if (this.state === 'down') {
+    if (this.state === 'tackled') {
+      // locked in a tackle: tweens drive the position
+      this.vel.set(0, 0);
+    } else if (this.state === 'down') {
       this.vel.scale(Math.max(0, 1 - dt * 8));
       this.x += this.vel.x * dt;
       this.y += this.vel.y * LAT_SCALE * dt;
@@ -113,7 +116,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     }
     this._routeDriven = false;
 
-    this.shadow.setPosition(Math.round(this.x), Math.round(this.y));
+    this.shadow.setPosition(Math.round(this.x + (this.shadowDX || 0)), Math.round(this.y));
     this.setDepth(10 + this.y / 1000);
     this.refreshAnim();
   }
@@ -164,7 +167,47 @@ export class Player extends Phaser.GameObjects.Sprite {
     });
   }
 
-  /** Tackled: play the death animation and stay down. */
+  /**
+   * Tip over like a plank: the full standing sprite rotates 90 degrees about
+   * the feet toward the hit direction, so the body stays straight. The
+   * shadow stretches out and slides under the body as he goes down.
+   * @param {number} dirX  >= 0 falls to the right, < 0 to the left
+   */
+  tipOver(dirX, duration = 260) {
+    this.state = 'down';
+    this.engaged = null;
+    this.stop();
+    this.vel.set(0, 0);
+    const side = dirX >= 0 ? 1 : -1;
+    // freeze on the first standing frame of the current facing
+    this.playAnim('idle', true);
+    this.anims.pause(this.anims.currentAnim.frames[0]);
+    const body = this.height * 0.55; // distance from feet to the middle of the body
+    this.scene.tweens.add({ targets: this, angle: 90 * side, duration, ease: 'Quad.In' });
+    this.scene.tweens.add({
+      targets: this, shadowDX: side * body, duration, ease: 'Quad.In',
+    });
+    this.scene.tweens.add({ targets: this.shadow, scaleX: 1.7, scaleY: 0.8, alpha: 0.24, duration, ease: 'Quad.In' });
+  }
+
+  /** Stand back up after a whiff. */
+  getUp(duration = 220) {
+    this.scene.tweens.add({ targets: this, angle: 0, shadowDX: 0, duration, ease: 'Quad.Out' });
+    this.scene.tweens.add({
+      targets: this.shadow, scaleX: 1, scaleY: 1, alpha: 0.32, duration,
+      onComplete: () => { if (this.state === 'down') { this.state = 'idle'; this.anims.resume(); } },
+    });
+  }
+
+  /** Broken tackle: a short wobble and slowdown, then keep running. */
+  stumble(seconds = 0.3) {
+    this.speedScale = 0.55;
+    this.scene.tweens.add({ targets: this, angle: { from: -10, to: 10 }, duration: (seconds * 1000) / 4, yoyo: true, repeat: 1,
+      onComplete: () => { this.angle = 0; } });
+    this.scene.time.delayedCall(seconds * 1000, () => { this.speedScale = 1; });
+  }
+
+  /** (old) Tackled: play the death animation and stay down. */
   goDown(pushX = 0, pushY = 0) {
     if (this.state === 'down') return;
     this.state = 'down';

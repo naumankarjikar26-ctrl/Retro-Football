@@ -91,7 +91,9 @@ export const TUNING = {
   maxThrowYd: 60,          // throw length at full pull
   catchRadiusYd: 1.7,
   tackleRadiusYd: 1.15,
-  brokenTackleChance: 0.15,
+  // Chance a ball carrier escapes a tackle attempt (3 in 8). Later: from ratings.
+  brokenTackleChance: 3 / 8,
+  tackleRetryDelay: 1.0,     // seconds before a whiffed defender may try again
   blockRadiusYd: 1.4,
   shedTime: [2.6, 5.2],    // seconds a defender stays engaged with a blocker
   resultHold: 1.8,         // seconds the result banner shows before resetting

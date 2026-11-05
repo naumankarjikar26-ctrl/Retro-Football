@@ -51,6 +51,16 @@ export class GameScene extends Phaser.Scene {
     this.newPlay(true);
   }
 
+  /** Small white impact flash at a tackle (a quick expanding pixel burst). */
+  impactFlash(x, y) {
+    const g = this.add.graphics().setDepth(2500);
+    g.fillStyle(PAL.white, 1);
+    for (const [dx, dy] of [[0, -6], [0, 6], [-6, 0], [6, 0], [-4, -4], [4, -4], [-4, 4], [4, 4]]) g.fillRect(dx - 1, dy - 1, 3, 3);
+    g.fillCircle(0, 0, 4);
+    g.setPosition(Math.round(x), Math.round(y));
+    this.tweens.add({ targets: g, scale: 1.8, alpha: 0, duration: 160, ease: 'Quad.Out', onComplete: () => g.destroy() });
+  }
+
   // ---------------------------------------------------------------- flow
 
   newPlay(first = false) {
