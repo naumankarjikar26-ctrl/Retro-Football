@@ -106,7 +106,7 @@ export class Player extends Phaser.GameObjects.Sprite {
       this.y += this.vel.y * LAT_SCALE * dt;
     } else if (!this._routeDriven) {
       // accelerate toward the desired velocity
-      const maxDv = yd(TUNING.accel) * dt;
+      const maxDv = yd(TUNING.accel * (this.accelScale || 1)) * dt; // trackers turn sharper
       const dvx = this.desired.x - this.vel.x;
       const dvy = this.desired.y - this.vel.y;
       const dv = Math.hypot(dvx, dvy);

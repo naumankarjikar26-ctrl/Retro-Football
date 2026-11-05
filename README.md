@@ -103,8 +103,9 @@ below him) cuts him about 3.5 yards over (`cutYards` in
 
 ## Catching
 
-When the ball is thrown, the receiver nearest the landing spot (within 8
-yards) leaves his route and runs to the spot. While the ball is in the air, a
+As soon as you release a throw, the receiver who can get closest to the
+landing spot (within 20 yards) leaves his route and tracks the ball. If the
+pass is underthrown, he stops and comes back for it. While the ball is in the air, a
 faint circle on the ground shows the sure-catch range. When the ball comes
 down, the closest receiver's distance to the spot sets the catch chance:
 

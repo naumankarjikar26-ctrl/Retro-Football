@@ -17,7 +17,7 @@ export function updateOffense(play, dt) {
     if (p.runBlocker) { blockDownfield(p, play, time); continue; } // run play: receivers block
 
     if (p.route) {
-      if (phase === 'air' && p === play.intended) attackBall(p, play);
+      if (p === play.intended && play.trackTarget) attackBall(p, play);
       else runRoute(p, play, dt);
     }
   }
@@ -49,9 +49,8 @@ function runRoute(p, play, dt) {
 
 /** Intended receiver adjusts to arrive at the landing spot as the ball does. */
 function attackBall(p, play) {
-  const t = play.throwTarget;
-  const f = play.ball.flight;
-  const timeLeft = Math.max(0.05, f ? (1 - f.t) * f.duration : 0.05);
+  const t = play.trackTarget;
+  const timeLeft = Math.max(0.05, t.arriveAt - play.time);
   const needed = gdist(p, t) / timeLeft / yd(p.maxSpeed);
   p.moveToward(t.x, t.y, Phaser.Math.Clamp(needed, 0.55, 1));
 }

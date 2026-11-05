@@ -129,13 +129,17 @@ export class PlayController {
     const { dist, duration, peak } = this.throwParams(tx, ty);
     if (dist < TUNING.minThrowYd) return false;
 
+    // the receiver reads the throw as the QB winds up, not when it leaves his hand
+    const windup = 0.3;
+    this.intended = this.pickTracker({ x: tx, y: ty }, duration + windup);
+    this.trackTarget = { x: tx, y: ty, arriveAt: this.time + windup + duration };
+    if (this.intended) this.intended.accelScale = CATCHING.trackAccelScale;
+
     q.throwMotion(tx - q.x, ty - q.y, () => {
       if (this.phase !== 'qb') return;
       this.phase = 'air';
       this.throwTime = this.time;
       this.throwTarget = { x: tx, y: ty };
-      // the receiver closest to the landing spot goes up for it
-      this.intended = nearest({ x: tx, y: ty }, this.receivers.filter((r) => r.state !== 'down'), yd(CATCHING.trackRadiusYd));
       this.throwDist = dist;
       this.controlled = null;
       this.throwFrom = { x: q.x, y: q.y };
@@ -218,6 +222,23 @@ export class PlayController {
       if (p.y > bottom) { p.y = bottom; if (p.vel.y > 0) p.vel.y = 0; }
       p.x = Phaser.Math.Clamp(p.x, left, right);
     }
+  }
+
+  /**
+   * Who goes for the ball: the receiver who can end up closest to the landing
+   * spot when it arrives (distance minus how far he can run in the flight time).
+   */
+  pickTracker(spot, flightTime) {
+    let best = null;
+    let bestScore = Infinity;
+    for (const r of this.receivers) {
+      if (r.state === 'down' || r.state === 'tackled') continue;
+      const d = gdist(r, spot);
+      if (d > yd(CATCHING.trackRadiusYd)) continue;
+      const score = Math.max(0, d - yd(r.maxSpeed) * flightTime) + d * 0.05; // tie-break: nearer
+      if (score < bestScore) { bestScore = score; best = r; }
+    }
+    return best;
   }
 
   /** The ball carrier on a run play (before he has the ball). */

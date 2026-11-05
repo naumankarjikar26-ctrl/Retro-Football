@@ -2,9 +2,11 @@
 // Distances are in yards (on the ground), chances are 0..1.
 
 export const CATCHING = {
-  // When the ball is thrown, the receiver nearest the landing spot (within
-  // this range) leaves his route and runs to the spot to make the catch.
-  trackRadiusYd: 8,
+  // When the ball is thrown, the receiver who can get closest to the landing
+  // spot (within this range) leaves his route and tracks the ball - including
+  // coming back for an underthrown ball.
+  trackRadiusYd: 20,
+  trackAccelScale: 2.2,     // how much sharper a tracking receiver can stop / turn
 
   // Catch chance by the closest receiver's distance to the landing spot.
   tiers: [
