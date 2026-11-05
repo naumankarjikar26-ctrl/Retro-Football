@@ -15,10 +15,16 @@ export class CameraController {
     this.guardFn = null; // () => {x, y} | null; defaults to the ball
     this.cx = WORLD_W / 2;
     this.cy = WORLD_H / 2;
+    this.zoom = 1;
+    this.zoomFn = () => 1; // () -> target zoom (e.g. zoomed out before the snap)
   }
 
-  get viewW() { return this.cam.width; }
-  get viewH() { return this.cam.height; }
+  // world area the camera shows (bigger when zoomed out)
+  get viewW() { return this.cam.width / this.zoom; }
+  get viewH() { return this.cam.height / this.zoom; }
+
+  /** fn() -> target zoom; the camera eases toward it. */
+  setZoom(fn) { this.zoomFn = fn; }
 
   /** fn() -> {x, y}: the world point the camera should centre on. */
   setFocus(fn) { this.focusFn = fn; }
@@ -26,12 +32,17 @@ export class CameraController {
   setGuard(fn) { this.guardFn = fn; }
 
   snapTo(x, y) {
+    this.zoom = this.zoomFn();
+    this.cam.setZoom(this.zoom);
     this.cx = x;
     this.cy = y;
     this.apply();
   }
 
   update(dt) {
+    const kz = 1 - Math.exp(-TUNING.camZoomLerp * dt);
+    this.zoom += (this.zoomFn() - this.zoom) * kz;
+    this.cam.setZoom(this.zoom);
     const t = this.focusFn();
     const kx = 1 - Math.exp(-TUNING.camLerp * dt);
     const ky = 1 - Math.exp(-TUNING.camLerp * 0.8 * dt);

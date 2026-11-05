@@ -6,7 +6,7 @@
 // higher. A tiny pull cancels.
 
 import {
-  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, yd, ydLat, groundLen, yardToX, latToY,
+  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, FIELD_TOP, FIELD_BOTTOM, yd, ydLat, groundLen, yardToX, latToY,
 } from '../config/constants.js';
 import { Field } from '../field/Field.js';
 import { CameraController } from '../camera/CameraController.js';
@@ -109,6 +109,7 @@ export class GameScene extends Phaser.Scene {
     this.camCtl.ball = this.play.ball;
     this.camCtl.setFocus(() => this.cameraFocus());
     this.camCtl.setGuard(() => this.cameraGuard());
+    this.camCtl.setZoom(() => this.cameraZoom());
     if (first) { const f = this.presnapFocus(); this.camCtl.snapTo(f.x, f.y); }
 
     bus.emit(EV.STATE, this.gs);
@@ -266,11 +267,23 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Before the snap: a little ahead of the line so the routes in front are visible. */
+  /**
+   * Before the snap the camera zooms out to show the whole field from sideline
+   * to sideline (like Retro Bowl's pre-snap view); at the snap it eases back
+   * in to the normal 1:1 play zoom.
+   */
+  cameraZoom() {
+    const ph = this.play?.phase;
+    if (this.calling || ph === 'presnap') {
+      return Math.min(1, this.cameras.main.height / (FIELD_BOTTOM - FIELD_TOP + 70));
+    }
+    return 1;
+  }
+
+  /** Before the snap: the whole field width, a little ahead of the line. */
   presnapFocus() {
     const p = this.play;
-    // zoomed in: centre on the ball, a few yards ahead of the line
-    return { x: p.losX + yd(7), y: p.ballY - 10 };
+    return { x: p.losX + yd(9), y: (FIELD_TOP + FIELD_BOTTOM) / 2 - 12 };
   }
 
   cameraFocus() {

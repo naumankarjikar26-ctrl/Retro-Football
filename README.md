@@ -17,7 +17,7 @@ Bowl:
   zones at the left and right edges.
 - **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
   and far (top) sides, and the hash marks are in the middle.
-- **Zoomed in on a big field:** about 25 yards are visible left to right (`PX_PER_YARD = 26`), and before the snap the camera centres a few yards past the line so the routes in front of you are visible. The
+- **Zoomed in on a big field:** about 25 yards are visible left to right (`PX_PER_YARD = 26`). Before the snap the camera zooms out to show the whole field from sideline to sideline (all 22 players and every route), then eases back in at the snap. The
   sideline-to-sideline axis is foreshortened (`FIELD_PX_H` in
   `src/config/constants.js`). Speed, throw length and tackle and catch
   distance are all measured in real yards, so the game plays the same at any

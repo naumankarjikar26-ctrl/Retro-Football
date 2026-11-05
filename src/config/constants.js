@@ -111,5 +111,6 @@ export const TUNING = {
   shedTime: [2.6, 5.2],    // seconds a defender stays engaged with a blocker
   resultHold: 1.8,         // seconds the result banner shows before resetting
   camLerp: 6,              // camera follow sharpness (higher = snappier)
+  camZoomLerp: 4,          // how quickly the camera zooms in at the snap
   camGuardPx: 10,          // ball is always kept at least this far inside the view
 };
