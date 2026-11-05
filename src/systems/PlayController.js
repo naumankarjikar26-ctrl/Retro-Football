@@ -318,8 +318,10 @@ export class PlayController {
     const r = nearest(t, alive(this.receivers), yd(lastTier));
     const dd = nearest(t, alive(this.defense), yd(C.defenderReachYd));
 
-    // a defender beat every receiver to the ball
-    if (dd && (!r || dYd(dd) < dYd(r))) {
+    // Break-ups are never random: only a defender who physically gets to the
+    // ball first (at the spot, and clearly ahead of every receiver) can play it.
+    const defAtBall = dd && dYd(dd) <= C.defenderReachYd && (!r || dYd(dd) + C.beatByYd < dYd(r));
+    if (defAtBall) {
       if (Math.random() < C.interceptChance) return this.intercept(dd);
       return this.incomplete('BROKEN UP', 'BROKEN UP', dd);
     }
@@ -328,11 +330,9 @@ export class PlayController {
     const dist = dYd(r);
     const tier = C.tiers.find((tr) => dist <= tr.maxYd);
     let chance = tier.chance;
+    // a defender right on him makes it harder to hold on (no automatic break-up)
     const contested = dd && toYards(gdist(dd, r)) <= C.contestedYd;
-    if (contested) {
-      if (Math.random() < C.contestedKnockAway) return this.incomplete('BROKEN UP', 'BROKEN UP', r);
-      chance -= C.contestedPenalty;
-    }
+    if (contested) chance -= C.contestedPenalty;
     if (this.throwDist >= C.deepThrowYd) chance -= C.deepPenalty;
     if (tier.dive) r.dive(t);
     this.lastCatch = { distYd: +dist.toFixed(2), chance: +chance.toFixed(2), contested: !!contested, intended: this.intended === r };

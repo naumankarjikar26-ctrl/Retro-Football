@@ -116,8 +116,11 @@ down, the closest receiver's distance to the spot sets the catch chance:
 - **3 to 4 yards:** 30%, with a diving catch.
 - **Beyond 4 yards:** incomplete.
 
-Contested catches, interceptions, deep-throw penalties and how the defense
-reacts are all tunable in `src/config/catching.js`. A short pop-up shows the
+A pass is only broken up (or intercepted) when a defender physically gets to
+the ball before every receiver, never by random chance. A defender right on
+the receiver only lowers the catch chance. Contested catches, interceptions,
+deep-throw penalties and how the defense reacts are all tunable in
+`src/config/catching.js`. A short pop-up shows the
 result: CATCH!, DROPPED, INCOMPLETE, BROKEN UP or INTERCEPTED.
 
 ## Play calling (Stage 2)

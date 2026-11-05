@@ -16,14 +16,17 @@ export const CATCHING = {
     { maxYd: 4.0, chance: 0.30, dive: true },
   ],                       // beyond the last tier: incomplete
 
-  // Contested: a defender this close to the receiver.
-  contestedYd: 1.5,
+  // Contested: a defender this close to the receiver when it arrives lowers
+  // the catch chance (he can't just knock it away - see below).
+  contestedYd: 1.0,
   contestedPenalty: 0.25,   // catch chance drops by this much
-  contestedKnockAway: 0.35, // chance the defender breaks it up first
 
-  // A defender closer to the landing spot than any receiver.
-  defenderReachYd: 1.5,     // he must be this close to the spot to make a play
-  interceptChance: 0.30,    // otherwise it's broken up / incomplete
+  // A pass is only broken up (or picked) if a defender physically gets to the
+  // ball first: within defenderReachYd of the spot AND at least beatByYd
+  // closer to it than every receiver. Never by random chance.
+  defenderReachYd: 1.0,
+  beatByYd: 0.5,
+  interceptChance: 0.30,    // when he does get there first: pick, otherwise broken up
 
   // How the defense reacts once the ball is in the air.
   defenseReactSec: 0.4,     // reaction time before breaking on the ball
