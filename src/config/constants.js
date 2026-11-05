@@ -1,8 +1,8 @@
 // Global tuning values. Everything gameplay-related is measured in YARDS and
 // converted to pixels with yd() so the field scale can change in one place.
 
-export const VIEW_W = 384;   // 480x270 / 1.25: everything (players too) 25% bigger, still pixel-perfect
-export const VIEW_H = 216;
+export const VIEW_W = 640;   // wide internal view: players small against a big field (still pixel-perfect)
+export const VIEW_H = 360;
 
 // ---------------------------------------------------------------------------
 // View: a HORIZONTAL field seen from a high sideline at a three-quarter angle.
@@ -11,16 +11,16 @@ export const VIEW_H = 216;
 // LAT_SCALE so the WHOLE field width (sideline to sideline) always fits on
 // screen. Players are drawn upright and sorted by Y (lower = in front).
 //
-// Screen layout (internal 384x216):
+// Screen layout (internal 640x360):
 //   [ top bar: score / down & distance ]  BAR_H
 //   [ field camera                     ]  FIELD_VIEW_H
 //   [ bottom bar: control hints        ]  HINT_H
 // ---------------------------------------------------------------------------
-export const BAR_H = 15;
-export const HINT_H = 14;
+export const BAR_H = 20;
+export const HINT_H = 19;
 export const FIELD_VIEW_H = VIEW_H - BAR_H - HINT_H; // 161
 
-export const PX_PER_YARD = 12.8;            // 30 yards visible across the 384px view
+export const PX_PER_YARD = 19.2;            // ~33 yards visible across the 640px view
 export const FIELD_WIDTH_YD = 160 / 3;               // 53.33 yd
 export const FIELD_PX_H = 410;                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
 export const LAT_SCALE = FIELD_PX_H / (FIELD_WIDTH_YD * PX_PER_YARD); // ~0.41
@@ -32,7 +32,7 @@ export const ENDZONE_YD = 10;
 export const END_PAD = 24;                     // bench / sideline area past each end line (px)
 export const OWN_GOAL_X = END_PAD + yd(ENDZONE_YD);   // left goal line (yard 0)
 export const WORLD_W = END_PAD * 2 + yd(100 + ENDZONE_YD * 2);
-export const FIELD_TOP = 40;                   // far sideline (room above for players' bodies + high throws)
+export const FIELD_TOP = 140;                  // far sideline (room above for players' bodies + high throws)
 export const FIELD_BOTTOM = FIELD_TOP + FIELD_PX_H; // near sideline
 export const WORLD_H = FIELD_BOTTOM + 20;
 export const CENTER_Y = (FIELD_TOP + FIELD_BOTTOM) / 2;
@@ -95,8 +95,8 @@ export const TUNING = {
   snapTime: 0.22,          // seconds for the shotgun snap to reach the QB
   qbDropback: 2,           // yards the QB drifts back after the snap
   // Pull-back throwing (screen px at the 320x180 internal resolution)
-  pullCancelPx: 7,         // release with less pull than this = no throw
-  pullMaxPx: 67,           // full power
+  pullCancelPx: 12,         // release with less pull than this = no throw
+  pullMaxPx: 110,           // full power
   minThrowYd: 5,           // throw length at the smallest pull
   maxThrowYd: 60,          // throw length at full pull
   catchRadiusYd: 1.7,

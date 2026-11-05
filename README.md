@@ -5,7 +5,7 @@ A retro pixel-art American football game for the browser, built with
 Retro Bowl but has its own art style, and it's heading toward realistic snap
 counts, hard counts and penalties.
 
-The game renders at 384x216 and scales up with nearest-neighbour filtering, so
+The game renders at 640x360 and scales up with nearest-neighbour filtering, so
 the pixels stay sharp.
 
 ## The view
@@ -17,7 +17,7 @@ Bowl:
   zones at the left and right edges.
 - **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
   and far (top) sides, and the hash marks are in the middle.
-- **About 30 yards are visible left to right** (`PX_PER_YARD = 12.8`). The
+- **Zoomed out:** about 33 yards are visible left to right (`PX_PER_YARD = 19.2`), and before the snap the camera centres on the whole formation so all 22 players are on screen. The
   sideline-to-sideline axis is foreshortened (`FIELD_PX_H` in
   `src/config/constants.js`). Speed, throw length and tackle and catch
   distance are all measured in real yards, so the game plays the same at any

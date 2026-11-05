@@ -80,7 +80,7 @@ export class Field {
       rect(TEAMS[team].jersey, x0, top, w, h);
       rect(TEAMS[team].jerseyDark, x0, top, w, 2);
       ctx.fillStyle = hex(PAL.white);
-      const s = 10; // big pixel letters
+      const s = 18; // big pixel letters
       const word = TEAMS[team].abbr;
       const tw = word.length * 4 * s - s;
       [...word].forEach((ch, i) => drawGlyph(ctx, ch, x0 + Math.round((w - tw) / 2) + i * 4 * s, Math.round(CENTER_Y - 2.5 * s), s));
@@ -111,7 +111,7 @@ export class Field {
     // yard numbers, upright, slightly see-through so they don't overpower players
     ctx.fillStyle = hex(white);
     ctx.globalAlpha = 0.55;
-    const s = 4;
+    const s = 7;
     for (let yl = 10; yl <= 90; yl += 10) {
       const [a, b] = String(yl <= 50 ? yl : 100 - yl);
       const x = X(yl);

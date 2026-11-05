@@ -176,7 +176,9 @@ export class GameScene extends Phaser.Scene {
   /** Before the snap: a little ahead of the line so the routes in front are visible. */
   presnapFocus() {
     const p = this.play;
-    return { x: p.losX + yd(5), y: p.ballY };
+    // vertically: centre on the whole formation so every receiver is in view
+    const ys = [...p.offense, ...p.defense].map((q) => q.y);
+    return { x: p.losX + yd(5), y: (Math.min(...ys) - 24 + Math.max(...ys)) / 2 };
   }
 
   cameraFocus() {

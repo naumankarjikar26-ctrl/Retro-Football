@@ -116,7 +116,7 @@ export class PlayController {
   throwParams(tx, ty) {
     const q = this.qb;
     const dist = toYards(gdist(q, { x: tx, y: ty }));
-    return { dist, duration: 0.35 + dist * 0.034, peak: (2 + dist * 0.7) * (PX_PER_YARD / 5) };
+    return { dist, duration: 0.35 + dist * 0.034, peak: (2 + dist * 0.7) * (PX_PER_YARD / 7) };
   }
 
   throwTo(tx, ty) {

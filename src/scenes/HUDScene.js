@@ -21,14 +21,14 @@ export class HUDScene extends Phaser.Scene {
     // top score bar
     this.add.rectangle(0, 0, VIEW_W, BAR_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, BAR_H - 1, VIEW_W, 1, PAL.dusk).setOrigin(0);
-    this.downText = new PixelText(this, 4, 3, '', PAL.sand, 2);
-    this.spotText = new PixelText(this, VIEW_W / 2, 3, '', PAL.white, 2).setAlign(0.5);
-    this.scoreText = new PixelText(this, VIEW_W - 4, 3, '', PAL.white, 2).setAlign(1);
+    this.downText = new PixelText(this, 6, 3, '', PAL.sand, 3);
+    this.spotText = new PixelText(this, VIEW_W / 2, 3, '', PAL.white, 3).setAlign(0.5);
+    this.scoreText = new PixelText(this, VIEW_W - 6, 3, '', PAL.white, 3).setAlign(1);
 
     // bottom hint bar
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, HINT_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, 1, PAL.dusk).setOrigin(0);
-    this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 3, '', PAL.silver, 2).setAlign(0.5);
+    this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 3, '', PAL.silver, 3).setAlign(0.5);
     this.onHint('PRESS + PULL BACK: SNAP + THROW');
 
     // result banner (shown only while the play is dead)
