@@ -37,6 +37,11 @@ export const CATCHING = {
   // Play action: linebackers chase the fake this long after the snap.
   paBiteSec: 0.8,
 
+  // Open WR / TE (no defender within openRadiusPx on screen) who is at the
+  // ball: drops only openDropChance of the time.
+  openRadiusPx: 10,
+  openDropChance: 0.01,
+
   // Deep balls are a little harder to haul in.
   deepThrowYd: 40,
   deepPenalty: 0.08,

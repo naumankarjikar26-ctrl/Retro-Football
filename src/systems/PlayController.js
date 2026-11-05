@@ -365,7 +365,7 @@ export class PlayController {
     this.controlled = carrier;
     carrier.route = null;
     this.laneY = carrier.y; // runs straight from where he caught it
-    bus.emit(EV.HINT, 'PRESS UP / DOWN (OR TAP ABOVE / BELOW) TO CUT');
+    bus.emit(EV.HINT, 'PRESS UP / DOWN (OR TAP ABOVE / BELOW) TO JUKE');
   }
 
   /** Ball comes down: catch / drop / break-up / interception (numbers in config/catching.js). */
@@ -397,6 +397,10 @@ export class PlayController {
     const contested = dd && toYards(gdist(dd, r)) <= C.contestedYd;
     if (contested) chance -= C.contestedPenalty;
     if (this.throwDist >= C.deepThrowYd) chance -= C.deepPenalty;
+    // an open WR / TE who gets to the ball almost never drops it
+    const openRadius = C.openRadiusPx;
+    const open = !this.defense.some((q) => q.state !== 'down' && Phaser.Math.Distance.Between(q.x, q.y, r.x, r.y) <= openRadius);
+    if (open && (r.role === 'WR' || r.role === 'TE') && dist <= C.tiers[0].maxYd) chance = 1 - C.openDropChance;
     if (tier.dive) r.dive(t);
     this.lastCatch = { distYd: +dist.toFixed(2), chance: +chance.toFixed(2), contested: !!contested, intended: this.intended === r };
     if (Math.random() > chance) return this.incomplete('DROPPED', 'DROPPED', r);
