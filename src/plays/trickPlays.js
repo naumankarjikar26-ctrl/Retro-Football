@@ -92,3 +92,12 @@ export const TRICK_PLAYS = [
 ];
 
 export const trickById = (id) => TRICK_PLAYS.find((t) => t.id === id);
+
+/** A trick play as a callable play definition (shown in the playbook's TRICK tab). */
+export function trickDef(t) {
+  return {
+    ...t, id: `trick-${t.id}`, name: t.name, banner: true, cat: 'trick', type: 'trick',
+    defense: 'nickel', blocking: { LT: 'DE1', LG: 'DT1', C: null, RG: 'DT2', RT: 'DE2' }, trick: t,
+  };
+}
+export const TRICK_DEFS = TRICK_PLAYS.map(trickDef);

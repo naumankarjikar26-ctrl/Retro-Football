@@ -77,8 +77,8 @@ Then open <http://localhost:8080>.
 
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
-| Call a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, `Q` = Quick Pick | Tap a tab, then a card |
-| Trick play (at the line, 4 per game) | `T` or the TRICK PLAY panel | Tap TRICK PLAY |
+| Open the playbook (optional) | `P` or the PLAYBOOK button | Tap PLAYBOOK |
+| Pick a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, `Esc` = close | Tap a tab, then a card |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
@@ -127,10 +127,18 @@ result: CATCH!, DROPPED, INCOMPLETE, BROKEN UP or INTERCEPTED.
 
 ## Play calling (Stage 2)
 
-Before every snap, the play-call screen shows tabs for each category, with a
-card per play: its name, type and a mini route diagram. Choose with the
-number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
-**QUICK PICK** (`Q`) calls a random play from any tab except kicks.
+Every play is called automatically, at random, weighted by the situation:
+
+- **3rd/4th and 7+:** mostly short and long passes.
+- **1-2 yards to go:** mostly runs.
+- **Inside the opponent's 10:** runs, short passes and play action; no long passes.
+- **Otherwise:** an even mix. The same play is never called twice in a row.
+
+The called play shows small at the top (e.g. "POWER - RUN"). The **PLAYBOOK**
+button (`P`) opens the playbook with that play highlighted: pick a card to
+change it, or close (`Esc`) to keep it. The 25-second play clock keeps running
+while it's open; if it hits 0 it's a 5-yard **delay of game** and the down is
+replayed.
 
 | Tab | Plays |
 | --- | --- |
@@ -154,12 +162,10 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 - **No possession change yet:** punts and field goals both lead to a new
   drive at your own 25.
 
-**TRICK PLAY** sits in the bottom-right corner at the line. Pressing it (or
-`T`) calls a real trick play. You get 4 per game, shown as 4 icons. The box
-shrinks with each one you use and is grayed out when they're gone.
+**TRICK** is a playbook tab. You choose which trick play to run, 4 per game.
+One is used when it's snapped; when they're gone the cards are locked. Trick
+plays are never auto-called.
 
-- **Picks:** each trick is drawn at random from a shuffled bag, so none repeats
-  until all of them have been used.
 - **Display:** "TRICK PLAY: NAME" shows at the top of the field, and routes and
   paths are drawn as normal.
 - **Stopped tricks:** a trick that gets stopped still counts as used.
@@ -200,7 +206,7 @@ and routes in `src/plays/routes.js`.
   dotted-arc throwing, catch/incompletion, run after catch, tackles, sacks, QB
   scrambles, down and distance, reset at the new spot.
 - [x] **Stage 2: Play calling.** Pick from 6-8 plays (passes, runs, a screen),
-  a Quick Pick button, and one audible at the line.
+  an optional playbook, and one audible at the line.
 - [ ] **Stage 3: Snap cadence.** Choose the snap count in the huddle. The QB
   calls a cadence in a speech bubble, and there's one live colour per game.
 - [ ] **Stage 4: Hard count.** Fake the snap. Defenders can jump offside and
@@ -223,7 +229,7 @@ src/
   config/assets.js       sprite manifest, frame size, direction row order
   scenes/BootScene.js    loads/builds textures, slices sheets, makes animations
   scenes/GameScene.js    input, camera, route drawing, aiming arc, play flow
-  scenes/PlayCallScene.js  play-call screen (cards, mini diagrams, Quick Pick)
+  scenes/PlayCallScene.js  play-call screen (cards, mini diagrams, trick tab)
   scenes/HUDScene.js     top score bar, bottom hint bar, result banner, pull indicator
   systems/PlayController.js  one live play: snap -> throw -> catch -> tackle
   systems/GameState.js   downs, distance, ball spot, score

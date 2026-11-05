@@ -9,16 +9,8 @@ export class GameState {
     this.score = { home: 0, away: 0 };
     this.quarter = 1;
     this.newDrive(25);
-    this.trickPlaysLeft = TUNING.trickPlaysPerGame;
+    this.trickPlaysLeft = TUNING.trickPlaysPerGame; // used up when a trick play is snapped
     // Stage 5: playClock, challengesLeft, half. Stage 4: hardCountHistory.
-  }
-
-  /** Trick plays: 4 per game, picked from a shuffled bag so none repeats until all are used. */
-  nextTrick(ids) {
-    if (this.trickPlaysLeft <= 0) return null;
-    if (!this.trickBag?.length) this.trickBag = Phaser.Utils.Array.Shuffle([...ids]);
-    this.trickPlaysLeft -= 1;
-    return this.trickBag.pop();
   }
 
   /** Each player's skin tone is picked once and kept for the whole game (Stage 6: from the roster). */

@@ -1,15 +1,17 @@
 // Stage 2: the play-call screen shown before every snap.
 // Tabs for each category (RUN / SHORT / LONG / PLAY ACTION / KICK), up to 8
-// play cards per tab (name, type tag, mini route diagram) and a QUICK PICK
-// button. Keys: LEFT / RIGHT switch tabs, 1-8 pick a play, Q quick-picks.
+// play cards per tab (name, type tag, mini route diagram). Opened from the
+// PLAYBOOK button on the field; the current play is highlighted. CLOSE (or
+// Esc) keeps the play that's already called. Keys: LEFT / RIGHT tabs, 1-8 pick.
 
 import { VIEW_W, VIEW_H, BAR_H, HINT_H, PAL } from '../config/constants.js';
 import { PixelText } from '../gfx/PixelFont.js';
 import { PLAYBOOK, CATEGORIES } from '../plays/playbook.js';
 import { OFFENSE_FORMATIONS } from '../plays/formations.js';
 import { ROUTES } from '../plays/routes.js';
+import { TRICK_DEFS } from '../plays/trickPlays.js';
 
-const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand };
+const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand, trick: PAL.red };
 const COLS = 4;
 const CARD_W = 148;
 const CARD_H = 112;
@@ -18,26 +20,32 @@ const GAP = 8;
 export class PlayCallScene extends Phaser.Scene {
   constructor() { super('PlayCall'); }
 
-  /** data: { onPick(playDef), tab? } */
+  /** data: { onPick(playDef), onClose(), currentId } */
   create(data) {
     this.onPick = data.onPick;
+    this.onClose = data.onClose;
+    this.currentId = data.currentId;
+    this.tricksLeft = data.tricksLeft ?? 0;
     this.picked = false;
-    this.tab = PlayCallScene.lastTab ?? 0;
+    const cur = [...PLAYBOOK, ...TRICK_DEFS].find((p) => p.id === this.currentId);
+    const curTab = cur ? CATEGORIES.findIndex((c) => c.id === cur.cat) : -1;
+    this.tab = curTab >= 0 ? curTab : (PlayCallScene.lastTab ?? 0);
     const top = BAR_H;
     this.add.rectangle(0, top, VIEW_W, VIEW_H - BAR_H - HINT_H, PAL.ink, 0.75).setOrigin(0);
 
-    // tab bar + quick pick
+    // tab bar + close
     this.tabs = CATEGORIES.map((c, i) => {
-      const x = 12 + i * 100;
-      const bg = this.add.rectangle(x, top + 6, 96, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
-      const label = new PixelText(this, x + 48, top + 12, c.name, PAL.white, 2).setAlign(0.5);
+      const x = 12 + i * 84;
+      const bg = this.add.rectangle(x, top + 6, 80, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
+      const name = c.id === 'trick' ? `TRICK ${this.tricksLeft}` : c.name === 'PLAY ACTION' ? 'PLAY ACT' : c.name;
+      const label = new PixelText(this, x + 40, top + 12, name, PAL.white, 2).setAlign(0.5);
       bg.setInteractive({ useHandCursor: true }).on('pointerup', () => this.showTab(i));
       return { bg, label, cat: c.id };
     });
     const qx = VIEW_W - 12 - 104;
-    const qb = this.add.rectangle(qx, top + 6, 104, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.sand);
-    new PixelText(this, qx + 52, top + 12, 'Q QUICK PICK', PAL.sand, 2).setAlign(0.5);
-    qb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.quickPick());
+    const qb = this.add.rectangle(qx, top + 6, 104, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.silver);
+    new PixelText(this, qx + 52, top + 12, 'ESC CLOSE', PAL.silver, 2).setAlign(0.5);
+    qb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.close());
 
     this.cardLayer = this.add.container(0, 0);
     this.showTab(this.tab);
@@ -45,8 +53,11 @@ export class PlayCallScene extends Phaser.Scene {
       if (e.key === 'ArrowLeft') this.showTab((this.tab + CATEGORIES.length - 1) % CATEGORIES.length);
       if (e.key === 'ArrowRight') this.showTab((this.tab + 1) % CATEGORIES.length);
       const n = Number(e.key);
-      if (n >= 1 && n <= this.plays.length) this.pick(this.plays[n - 1]);
-      if (e.key === 'q' || e.key === 'Q') this.quickPick();
+      if (n >= 1 && n <= this.plays.length) {
+        const pl = this.plays[n - 1];
+        if (!(pl.cat === 'trick' && this.tricksLeft <= 0)) this.pick(pl);
+      }
+      if (e.key === 'Escape') this.close();
     });
   }
 
@@ -58,7 +69,11 @@ export class PlayCallScene extends Phaser.Scene {
       t.label.setColor(k === i ? CAT_COLOR[t.cat] : PAL.white);
     });
     this.cardLayer.removeAll(true);
-    this.plays = PLAYBOOK.filter((p) => p.cat === CATEGORIES[i].id);
+    this.plays = CATEGORIES[i].id === 'trick' ? TRICK_DEFS : PLAYBOOK.filter((p) => p.cat === CATEGORIES[i].id);
+    if (CATEGORIES[i].id === 'trick') {
+      const msg = this.tricksLeft > 0 ? `${this.tricksLeft} OF 4 TRICK PLAYS LEFT THIS GAME` : 'NO TRICK PLAYS LEFT THIS GAME';
+      this.cardLayer.add(new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H - 26, msg, this.tricksLeft > 0 ? PAL.sand : PAL.slate, 2).setAlign(0.5));
+    }
     const gridW = COLS * CARD_W + (COLS - 1) * GAP;
     const x0 = Math.round((VIEW_W - gridW) / 2);
     const y0 = BAR_H + 36;
@@ -69,17 +84,20 @@ export class PlayCallScene extends Phaser.Scene {
 
   makeCard(play, x, y, i) {
     const items = [];
-    const bg = this.add.rectangle(x, y, CARD_W, CARD_H, 0x24304a).setOrigin(0).setStrokeStyle(2, PAL.slate);
+    const current = play.id === this.currentId; // the play that's called right now
+    const bg = this.add.rectangle(x, y, CARD_W, CARD_H, 0x24304a).setOrigin(0).setStrokeStyle(current ? 3 : 2, current ? PAL.lime : PAL.slate);
     items.push(bg);
     items.push(new PixelText(this, x + 6, y + 6, `${i + 1} ${play.name}`, PAL.white, 2));
-    const tag = { run: 'RUN', pass: 'PASS', screen: 'SCREEN', pa: 'PLAY ACTION', punt: 'PUNT', fg: 'FIELD GOAL' }[play.type];
+    const tag = { run: 'RUN', pass: 'PASS', screen: 'SCREEN', pa: 'PLAY ACTION', punt: 'PUNT', fg: 'FIELD GOAL', trick: 'TRICK PLAY' }[play.type];
+    const locked = play.cat === 'trick' && this.tricksLeft <= 0; // all trick plays used
     items.push(new PixelText(this, x + 6, y + CARD_H - 15, tag, CAT_COLOR[play.cat], 2));
     items.push(this.drawDiagram(play, x + 6, y + 22, CARD_W - 12, CARD_H - 42));
     bg.setInteractive({ useHandCursor: true });
     bg.on('pointerover', () => bg.setFillStyle(0x34446a));
     bg.on('pointerout', () => bg.setFillStyle(0x24304a));
     // pick on release so the same press can't also snap the ball
-    bg.on('pointerup', () => this.pick(play));
+    if (locked) { bg.setFillStyle(0x1a2030).setAlpha(0.6); bg.disableInteractive(); }
+    else bg.on('pointerup', () => this.pick(play));
     this.cardLayer.add(items);
   }
 
@@ -114,9 +132,12 @@ export class PlayCallScene extends Phaser.Scene {
     return g;
   }
 
-  quickPick() {
-    const plays = PLAYBOOK.filter((p) => p.cat !== 'special');
-    this.pick(plays[Math.floor(Math.random() * plays.length)]);
+  /** Close without changing the play. */
+  close() {
+    if (this.picked) return;
+    this.picked = true;
+    this.scene.stop();
+    this.onClose?.();
   }
 
   pick(play) {

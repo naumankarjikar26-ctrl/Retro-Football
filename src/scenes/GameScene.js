@@ -13,7 +13,7 @@ import { CameraController } from '../camera/CameraController.js';
 import { GameState } from '../systems/GameState.js';
 import { PlayController } from '../systems/PlayController.js';
 import { playById } from '../plays/playbook.js';
-import { TRICK_PLAYS, trickById } from '../plays/trickPlays.js';
+import { autoPick } from '../plays/autoPick.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 import { nearest } from '../ai/OffenseAI.js';
@@ -43,7 +43,7 @@ export class GameScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER');
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
-    this.input.keyboard.on('keydown-T', () => this.trickPlay());
+    this.input.keyboard.on('keydown-P', () => this.openPlaybook());
     // ball carrier cuts: one press = one cut (no holding)
     for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(-1));
     for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(1));
@@ -54,6 +54,8 @@ export class GameScene extends Phaser.Scene {
 
     this.scene.launch('HUD');
     bus.on(EV.PLAY_END, this.onPlayEnd, this);
+    // a trick play is used up when it's snapped (even if the defense stops it)
+    bus.on(EV.SNAP, () => { if (this.playDef?.type === 'trick') this.gs.trickPlaysLeft -= 1; }, this);
     bus.on(EV.POPUP, this.popup, this);
     this.events.once('shutdown', () => bus.removeAllListeners());
 
@@ -101,25 +103,50 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- flow
 
-  /** Between plays: open the play-call screen (Stage 2). */
+  /**
+   * Between plays: the next play is picked automatically from the playbook
+   * (weighted by down, distance and field position) and lined up right away.
+   * The PLAYBOOK button lets you swap it before the snap.
+   */
   newPlay(first = false) {
-    this.calling = true;
+    this.calling = false;
     this.aim = null;
     this.pendingThrow = null;
     this.aimGfx.clear();
-    if (first && !this.play) {
-      this.cameras.main.centerOn(yardToX(this.gs.ballOn) + yd(5), latToY(this.gs.ballLat));
-    }
-    bus.emit(EV.STATE, this.gs);
-    bus.emit(EV.HINT, 'CALL A PLAY: 1-8, ARROWS = TABS, Q = QUICK PICK');
-    this.scene.launch('PlayCall', { onPick: (def) => this.startPlay(def, { first }) });
+    this.gs.playClock = TUNING.playClockSec;
+    const def = autoPick(this.gs, this.lastPlayId);
+    this.startPlay(def, { first });
+  }
+
+  /** PLAYBOOK button: open the playbook over the field (any number of times before the snap). */
+  openPlaybook() {
+    if (this.calling || !this.play || this.play.phase !== 'presnap') return;
+    this.calling = true;
+    this.scene.launch('PlayCall', {
+      currentId: this.playDef?.id,
+      tricksLeft: this.gs.trickPlaysLeft,
+      onPick: (def) => { this.calling = false; this.startPlay(def); },
+      onClose: () => { this.calling = false; },
+    });
     this.scene.bringToTop('PlayCall');
+  }
+
+  /** The play clock ran out before the snap: 5-yard delay of game, replay the down. */
+  delayOfGame() {
+    if (this.calling) { this.scene.stop('PlayCall'); this.calling = false; }
+    this.gs.ballOn = Math.max(1, this.gs.ballOn - 5);
+    this.play.phase = 'dead';
+    this.deadTimer = 0;
+    bus.emit(EV.STATE, this.gs);
+    bus.emit('result', { headline: 'DELAY OF GAME', detail: '5 YARD PENALTY - REPLAY THE DOWN' });
+    bus.emit(EV.HINT, 'SPACE / TAP FOR NEXT PLAY');
   }
 
   /** Line up the called play. `audibled` keeps the one audible per play used up. */
   startPlay(def, { first = false, audibled = false } = {}) {
     this.calling = false;
     this.playDef = def;
+    this.lastPlayId = def.id;
     this.audibleUsed = audibled;
     this.play?.destroy();
     this.aim = null;
@@ -139,29 +166,15 @@ export class GameScene extends Phaser.Scene {
     bus.emit(EV.PRESNAP, this.gs);
     bus.emit(EV.PLAY_CALLED, def);
     const hints = {
-      run: 'PRESS / SPACE TO SNAP  -  T: TRICK PLAY',
+      run: 'SPACE: SNAP  -  P: PLAYBOOK',
       trick: 'PRESS / SPACE TO SNAP THE TRICK PLAY',
       punt: 'PRESS / SPACE TO SNAP AND PUNT',
       fg: 'PRESS / SPACE TO SNAP AND KICK',
     };
-    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  T: TRICK PLAY');
+    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  P: PLAYBOOK');
   }
 
-  /**
-   * TRICK PLAY at the line: swaps in a real trick play (4 per game). Picked
-   * from a shuffled bag, so no trick repeats until every one has been used.
-   * It counts as used even if the defense stops it.
-   */
-  trickPlay() {
-    if (this.calling || !this.play || this.play.phase !== 'presnap') return;
-    const id = this.gs.nextTrick(TRICK_PLAYS.map((t) => t.id));
-    if (!id) return;
-    const t = trickById(id);
-    this.startPlay({
-      ...t, id: `trick-${t.id}`, name: `TRICK PLAY: ${t.name}`, banner: true, cat: 'trick', type: 'trick',
-      defense: 'nickel', blocking: { LT: 'DE1', LG: 'DT1', C: null, RG: 'DT2', RT: 'DE2' }, trick: t,
-    });
-  }
+
 
   onAction() {
     if (this.calling || !this.play) return;
@@ -183,7 +196,7 @@ export class GameScene extends Phaser.Scene {
 
   onPointerDown(p) {
     if (this.calling || !this.play) return;
-    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the TRICK PLAY panel
+    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the PLAYBOOK button
     const ph = this.play?.phase;
     if (ph === 'dead') { this.onAction(); return; }
     // click / tap the running back: he gets the ball and runs it
@@ -267,9 +280,14 @@ export class GameScene extends Phaser.Scene {
 
   update(_t, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
-    if (!this.play) return;            // first play-call screen
+    if (!this.play) return;
+    // play clock runs before the snap, including while the playbook is open
+    if (this.play.phase === 'presnap') {
+      this.gs.playClock -= dt;
+      if (this.gs.playClock <= 0) this.delayOfGame();
+    }
     this.play.update(dt, this.readInput());
-    if (this.calling) { this.camCtl.update(dt); return; } // menu open over the last play
+    if (this.calling) { this.camCtl.update(dt); return; } // playbook open over the field
     if (this.pendingThrow && this.play.canThrow()) {
       this.play.throwTo(this.pendingThrow.x, this.pendingThrow.y);
       this.pendingThrow = null;

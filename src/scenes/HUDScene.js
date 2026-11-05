@@ -11,6 +11,7 @@
 import { VIEW_W, VIEW_H, BAR_H, HINT_H, PAL, TEAMS, TUNING } from '../config/constants.js';
 import { PixelText } from '../gfx/PixelFont.js';
 import { bus, EV } from '../systems/events.js';
+import { CAT_LABEL } from '../plays/autoPick.js';
 
 export class HUDScene extends Phaser.Scene {
   constructor() { super('HUD'); }
@@ -29,7 +30,7 @@ export class HUDScene extends Phaser.Scene {
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, HINT_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, 1, PAL.dusk).setOrigin(0);
     this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 3, '', PAL.silver, 3).setAlign(0.5);
-    this.onHint('CALL A PLAY: 1-8, ARROWS = TABS, Q = QUICK PICK');
+    this.onHint('');
 
     // result banner (shown only while the play is dead)
     this.banner = this.add.container(VIEW_W / 2, BAR_H + 34).setVisible(false);
@@ -44,16 +45,33 @@ export class HUDScene extends Phaser.Scene {
     // current play name (bottom-left of the field)
     this.playName = new PixelText(this, 6, VIEW_H - HINT_H - 14, '', PAL.sand, 2);
 
-    // TRICK PLAY panel (bottom-right): calls a real trick play at the line.
-    // Each signal icon is one change left this half.
-    this.buildChangePlay();
+
+    // PLAYBOOK button (bottom-right)
+    this.pbBtn = this.add.container(VIEW_W - 112 - 8, VIEW_H - HINT_H - 58 - 6).setVisible(false);
+    const pbg = this.add.graphics();
+    pbg.fillStyle(PAL.ink, 0.9).fillRoundedRect(0, 0, 112, 58, 6);
+    pbg.lineStyle(2, PAL.sky, 1).strokeRoundedRect(1, 1, 110, 56, 6);
+    this.pbHit = this.add.rectangle(0, 0, 112, 58, 0x000000, 0.001).setOrigin(0);
+    this.pbBtn.add([pbg, new PixelText(this, 56, 14, 'PLAYBOOK', PAL.sky, 2).setAlign(0.5),
+      new PixelText(this, 56, 34, 'P', PAL.silver, 2).setAlign(0.5), this.pbHit]);
+    this.pbHit.setInteractive({ useHandCursor: true }).on('pointerup', () => this.gameScene.openPlaybook());
+
+    // play clock (top bar)
+    this.clockText = new PixelText(this, 190, 3, '', PAL.white, 3);
+
+    // the called play, small, at the top of the field: "POWER - RUN"
+    this.callLabel = new PixelText(this, VIEW_W / 2, BAR_H + 6, '', PAL.white, 2).setAlign(0.5).setVisible(false);
     // random plays: show the play type at the top of the field
     this.randomLabel = new PixelText(this, VIEW_W / 2, BAR_H + 6, '', PAL.sand, 3).setAlign(0.5).setVisible(false);
     bus.on(EV.PLAY_CALLED, (def) => {
       this.playName.setText(def.detail ? `${def.name} - ${def.detail}` : def.name);
-      this.randomLabel.setText(def.random || def.banner ? def.name : '').setVisible(!!(def.random || def.banner));
+      this.randomLabel.setText(def.random || def.banner ? (def.cat === 'trick' ? `TRICK PLAY: ${def.name}` : def.name) : '').setVisible(!!(def.random || def.banner));
     }, this);
-    bus.on(EV.SNAP, () => this.randomLabel.setVisible(false), this);
+    bus.on(EV.PLAY_CALLED, (def) => {
+      const cat = def.cat === 'trick' ? '' : ` - ${CAT_LABEL[def.cat] || ''}`;
+      this.callLabel.setText(`${def.name}${cat}`).setVisible(!def.banner && !def.random);
+    }, this);
+    bus.on(EV.SNAP, () => { this.randomLabel.setVisible(false); this.callLabel.setVisible(false); }, this);
 
     bus.on(EV.STATE, this.onState, this);
     bus.on(EV.HINT, this.onHint, this);
@@ -61,6 +79,8 @@ export class HUDScene extends Phaser.Scene {
     bus.on('result', this.onResult, this);
     this.gameScene = this.scene.get('Game');
     if (this.gameScene.gs) this.onState(this.gameScene.gs);
+    // the first play was called before the HUD existed: show its label now
+    if (this.gameScene.playDef) bus.emit(EV.PLAY_CALLED, this.gameScene.playDef);
   }
 
   update() {
@@ -68,71 +88,18 @@ export class HUDScene extends Phaser.Scene {
     const g = this.gameScene;
     this.playName.setVisible(!!g.play && !g.calling);
     const atLine = !!g.play && !g.calling && g.play.phase === 'presnap';
-    if (atLine && this.cpShown !== g.gs.trickPlaysLeft) this.drawChangePlay(g.gs.trickPlaysLeft);
-    this.cpPanel.setVisible(atLine);
-  }
-
-  buildChangePlay() {
-    this.cpH = 58;
-    this.cpPanel = this.add.container(0, VIEW_H - HINT_H - this.cpH - 6).setVisible(false);
-    this.cpGfx = this.add.graphics();
-    this.cpTitle = new PixelText(this, 0, 8, 'TRICK PLAY', PAL.white, 3).setAlign(0.5);
-    this.cpTitleSmall = new PixelText(this, 0, 10, 'TRICK PLAY', PAL.white, 2).setAlign(0.5);
-    this.cpHit = this.add.rectangle(0, 0, 10, this.cpH, 0x000000, 0.001).setOrigin(0);
-    this.cpPanel.add([this.cpGfx, this.cpTitle, this.cpTitleSmall, this.cpHit]);
-    this.cpHit.setInteractive({ useHandCursor: true });
-    this.cpHit.on('pointerup', () => this.gameScene.trickPlay());
-  }
-
-  /**
-   * The box only holds the changes you have left: it shrinks with each use,
-   * the title shrinks then drops out when it no longer fits, and at zero the
-   * whole panel is gone.
-   */
-  drawChangePlay(left) {
-    this.cpShown = left;
-    const g = this.cpGfx;
-    g.clear();
-    const gap = 22;
-    const pad = 14;
-    // shrinks with each use; when none are left it stays as a grayed-out button
-    const W = left > 0 ? Math.max(36, left * gap + pad * 2 - (gap - 14)) : 104;
-    const col = left > 0 ? PAL.white : PAL.slate;
-    const H = this.cpH;
-    this.cpPanel.x = VIEW_W - W - 8; // anchored to the right edge
-    this.cpHit.setSize(W, H);
-    this.cpHit.input.hitArea.setSize(W, H);
-    g.fillStyle(PAL.ink, left > 0 ? 0.9 : 0.6).fillRoundedRect(0, 0, W, H, 6);
-    g.lineStyle(2, col, 1).strokeRoundedRect(1, 1, W - 2, H - 2, 6);
-    this.cpTitle.setColor(col);
-    this.cpTitleSmall.setColor(col);
-    const bigFits = this.cpTitle.textWidth + 12 <= W;
-    const smallFits = this.cpTitleSmall.textWidth + 10 <= W;
-    this.cpTitle.setVisible(bigFits).setPosition(W / 2, 8);
-    this.cpTitleSmall.setVisible(!bigFits && smallFits).setPosition(W / 2, 10);
-    const hasTitle = bigFits || smallFits;
-    const cy = hasTitle ? 41 : H / 2;
-    if (left <= 0) {
-      this.cpTitleSmall.setVisible(true).setPosition(W / 2, H / 2 - 5);
-      return;
-    }
-    const x0 = W / 2 - ((left - 1) * gap) / 2;
-    for (let i = 0; i < left; i++) {
-      const cx = Math.round(x0 + i * gap) - 4;
-      // dot + two widening arcs, like a little "signal" glyph
-      g.fillStyle(PAL.white, 1).fillRect(cx, cy - 1, 2, 2);
-      g.lineStyle(2, PAL.white, 1);
-      for (const r of [5, 9]) {
-        g.beginPath();
-        g.arc(cx - 2, cy, r, -Math.PI / 3.2, Math.PI / 3.2);
-        g.strokePath();
-      }
+    this.pbBtn.setVisible(atLine);
+    const clockOn = !!g.play && g.play.phase === 'presnap';
+    this.clockText.setVisible(clockOn);
+    if (clockOn) {
+      const sec = Math.max(0, Math.ceil(g.gs.playClock));
+      this.clockText.setText(`:${String(sec).padStart(2, '0')}`).setColor(sec <= 5 ? PAL.orange : PAL.white);
     }
   }
 
   /** True if a screen point is over a HUD button (so it doesn't snap the ball). */
   overButton(p) {
-    return this.cpPanel.visible && this.cpHit.getBounds().contains(p.x, p.y);
+    return this.pbBtn.visible && this.pbHit.getBounds().contains(p.x, p.y);
   }
 
   /** Circle at the press point and a line to the current pointer. */
