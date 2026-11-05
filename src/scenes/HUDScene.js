@@ -68,44 +68,53 @@ export class HUDScene extends Phaser.Scene {
     const g = this.gameScene;
     this.playName.setVisible(!!g.play && !g.calling);
     const atLine = !!g.play && !g.calling && g.play.phase === 'presnap';
-    this.cpPanel.setVisible(atLine);
     if (atLine && this.cpShown !== g.gs.changePlaysLeft) this.drawChangePlay(g.gs.changePlaysLeft);
+    this.cpPanel.setVisible(atLine && g.gs.changePlaysLeft > 0);
   }
 
   buildChangePlay() {
-    const W = 196;
-    const H = 58;
-    this.cpW = W;
-    this.cpH = H;
-    this.cpPanel = this.add.container(VIEW_W - W - 8, VIEW_H - HINT_H - H - 6).setVisible(false);
+    this.cpH = 58;
+    this.cpPanel = this.add.container(0, VIEW_H - HINT_H - this.cpH - 6).setVisible(false);
     this.cpGfx = this.add.graphics();
-    this.cpTitle = new PixelText(this, W / 2, 8, 'CHANGE PLAY', PAL.white, 3).setAlign(0.5);
-    this.cpHit = this.add.rectangle(0, 0, W, H, 0x000000, 0.001).setOrigin(0);
-    this.cpPanel.add([this.cpGfx, this.cpTitle, this.cpHit]);
+    this.cpTitle = new PixelText(this, 0, 8, 'CHANGE PLAY', PAL.white, 3).setAlign(0.5);
+    this.cpTitleSmall = new PixelText(this, 0, 10, 'CHANGE PLAY', PAL.white, 2).setAlign(0.5);
+    this.cpHit = this.add.rectangle(0, 0, 10, this.cpH, 0x000000, 0.001).setOrigin(0);
+    this.cpPanel.add([this.cpGfx, this.cpTitle, this.cpTitleSmall, this.cpHit]);
     this.cpHit.setInteractive({ useHandCursor: true });
     this.cpHit.on('pointerup', () => this.gameScene.changePlay());
   }
 
-  /** Dark rounded panel, big title, one "signal" icon per change left (used ones dimmed). */
+  /**
+   * The box only holds the changes you have left: it shrinks with each use,
+   * the title shrinks then drops out when it no longer fits, and at zero the
+   * whole panel is gone.
+   */
   drawChangePlay(left) {
     this.cpShown = left;
     const g = this.cpGfx;
-    const { cpW: W, cpH: H } = this;
-    const total = TUNING.changePlaysPerHalf;
     g.clear();
-    g.fillStyle(PAL.ink, 0.9).fillRoundedRect(0, 0, W, H, 6);
-    g.lineStyle(2, left > 0 ? PAL.white : PAL.slate, 1).strokeRoundedRect(1, 1, W - 2, H - 2, 6);
-    this.cpTitle.setColor(left > 0 ? PAL.white : PAL.slate);
+    if (left <= 0) { this.cpPanel.setVisible(false); return; }
     const gap = 22;
-    const x0 = W / 2 - ((total - 1) * gap) / 2;
-    for (let i = 0; i < total; i++) {
-      const on = i < left;
+    const pad = 14;
+    const W = Math.max(36, left * gap + pad * 2 - (gap - 14));
+    const H = this.cpH;
+    this.cpPanel.x = VIEW_W - W - 8; // anchored to the right edge
+    this.cpHit.setSize(W, H);
+    this.cpHit.input.hitArea.setSize(W, H);
+    g.fillStyle(PAL.ink, 0.9).fillRoundedRect(0, 0, W, H, 6);
+    g.lineStyle(2, PAL.white, 1).strokeRoundedRect(1, 1, W - 2, H - 2, 6);
+    const bigFits = this.cpTitle.textWidth + 12 <= W;
+    const smallFits = this.cpTitleSmall.textWidth + 10 <= W;
+    this.cpTitle.setVisible(bigFits).setPosition(W / 2, 8);
+    this.cpTitleSmall.setVisible(!bigFits && smallFits).setPosition(W / 2, 10);
+    const hasTitle = bigFits || smallFits;
+    const cy = hasTitle ? 41 : H / 2;
+    const x0 = W / 2 - ((left - 1) * gap) / 2;
+    for (let i = 0; i < left; i++) {
       const cx = Math.round(x0 + i * gap) - 4;
-      const cy = 41;
-      const col = on ? PAL.white : PAL.dusk;
       // dot + two widening arcs, like a little "signal" glyph
-      g.fillStyle(col, 1).fillRect(cx, cy - 1, 2, 2);
-      g.lineStyle(2, col, 1);
+      g.fillStyle(PAL.white, 1).fillRect(cx, cy - 1, 2, 2);
+      g.lineStyle(2, PAL.white, 1);
       for (const r of [5, 9]) {
         g.beginPath();
         g.arc(cx - 2, cy, r, -Math.PI / 3.2, Math.PI / 3.2);

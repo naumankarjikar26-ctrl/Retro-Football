@@ -156,7 +156,9 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 
 **CHANGE PLAY** sits in the bottom-right corner at the line. Pressing it (or
 `C`) swaps in a brand-new random play before the snap. You get 8 per half:
-each signal icon on the panel is one change left, and used ones dim. The
+each signal icon on the panel is one change left. The box shrinks as you use
+them: the title gets smaller and then drops out, and at zero the panel
+disappears. The
 count is `changePlaysPerHalf` in `src/config/constants.js`. Until a game clock
 exists there's no halftime, so for now the 8 last the whole game.
 `GameState.startHalf()` refills them.
