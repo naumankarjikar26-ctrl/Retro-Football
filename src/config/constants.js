@@ -86,7 +86,7 @@ export const TUNING = {
   qbDropback: 2,           // yards the QB drifts back after the snap
   // Pull-back throwing (screen px at the 320x180 internal resolution)
   pullCancelPx: 12,         // release with less pull than this = no throw
-  pullMaxPx: 150,           // full power
+  pullMaxPx: 200,           // full power
   minThrowYd: 5,           // throw length at the smallest pull
   maxThrowYd: 60,          // throw length at full pull
   catchRadiusYd: 1.7,
