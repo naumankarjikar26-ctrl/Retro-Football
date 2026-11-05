@@ -50,7 +50,13 @@ export class HUDScene extends Phaser.Scene {
     this.audBg.setInteractive({ useHandCursor: true });
     this.audBg.on('pointerup', () => this.gameScene.audible());
     this.audBtn.setVisible(false);
-    bus.on(EV.PLAY_CALLED, (def) => this.playName.setText(def.name), this);
+    // random plays: show the play type at the top of the field
+    this.randomLabel = new PixelText(this, VIEW_W / 2, BAR_H + 6, '', PAL.sand, 3).setAlign(0.5).setVisible(false);
+    bus.on(EV.PLAY_CALLED, (def) => {
+      this.playName.setText(def.detail ? `${def.name} - ${def.detail}` : def.name);
+      this.randomLabel.setText(def.random ? def.name : '').setVisible(!!def.random);
+    }, this);
+    bus.on(EV.SNAP, () => this.randomLabel.setVisible(false), this);
 
     bus.on(EV.STATE, this.onState, this);
     bus.on(EV.HINT, this.onHint, this);

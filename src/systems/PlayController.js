@@ -71,7 +71,8 @@ export class PlayController {
     this.receivers = [];
     for (const [slot, routeName] of Object.entries(this.def.routes)) {
       const p = this.offenseBySlot[slot];
-      const outSign = Math.sign(p.y - this.ballY) || 1;
+      // routeSign flips a path (e.g. a random run to the left instead of the right)
+      const outSign = (Math.sign(p.y - this.ballY) || 1) * (this.def.routeSign?.[slot] ?? 1);
       p.route = buildRoute(routeName, p.x, p.y, outSign);
       p.route.delay = this.def.routeDelay?.[slot] || 0;
       if (!p.route.curve) { p.route = null; p.runBlocker = true; continue; } // 'block': blocks for the run
@@ -190,6 +191,13 @@ export class PlayController {
       if (p.state === 'throwing') return;
       // run plays: the QB stays put and hands off; your keys steer the runner after
       if (!this.isPassPlay) { p.stop(); return; } // runs / kicks: QB stays put
+      // play action: hold the fake to the back for a moment, then drop
+      if (this.def.type === 'pa' && this.time - this.snapTime < TUNING.paFakeTime) {
+        const rb = this.fakeRunner;
+        if (rb) p.facing = rb.y < p.y ? 'NW' : 'SW';
+        p.stop();
+        return;
+      }
       if (hasKeys) p.moveDir(input.dx, input.dy, input.aiming ? 0.55 : 1);
       else if (p.x > this.dropbackX + 1) p.moveToward(this.dropbackX, p.y, 0.55);
       else p.stop();

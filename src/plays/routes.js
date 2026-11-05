@@ -36,6 +36,7 @@ export const ROUTES = {
   deepOut:   { points: [[0, 0], [0, 15], [12, 15]] },
   comeback:  { points: [[0, 0], [0, 15], [2, 12]], settle: true },
   deepCross: { points: [[0, 0], [0, 10], [-26, 20]] },
+  checkdown: { points: [[0, 0], [1, 2], [1.5, 4]], settle: true },
   // more run paths (I-form / singleback tailback starts straight behind the QB)
   runDive:    { points: [[0, 0], [0.3, 5], [0.6, 16]], curve: true },
   runPower:   { points: [[0, 0], [0.6, 5], [1.6, 7], [1.8, 18]], curve: true },

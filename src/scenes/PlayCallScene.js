@@ -8,6 +8,7 @@ import { PixelText } from '../gfx/PixelFont.js';
 import { PLAYBOOK, CATEGORIES } from '../plays/playbook.js';
 import { OFFENSE_FORMATIONS } from '../plays/formations.js';
 import { ROUTES } from '../plays/routes.js';
+import { randomPlay } from '../plays/randomPlay.js';
 
 const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand };
 const COLS = 4;
@@ -42,16 +43,52 @@ export class PlayCallScene extends Phaser.Scene {
     this.cardLayer = this.add.container(0, 0);
     this.showTab(this.tab);
 
+    // RANDOM PLAY: generates a brand-new play; press again to re-roll
+    const rx = VIEW_W / 2 - 90;
+    const ry = VIEW_H - HINT_H - 30;
+    const rb = this.add.rectangle(rx, ry, 180, 24, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.lime);
+    this.randomLabel = new PixelText(this, rx + 90, ry + 7, 'R  RANDOM PLAY', PAL.lime, 2).setAlign(0.5);
+    rb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.rollRandom());
+
     this.input.keyboard.on('keydown', (e) => {
       if (e.key === 'ArrowLeft') this.showTab((this.tab + CATEGORIES.length - 1) % CATEGORIES.length);
       if (e.key === 'ArrowRight') this.showTab((this.tab + 1) % CATEGORIES.length);
       const n = Number(e.key);
-      if (n >= 1 && n <= this.plays.length) this.pick(this.plays[n - 1]);
+      if (!this.randomDef && n >= 1 && n <= this.plays.length) this.pick(this.plays[n - 1]);
       if (e.key === 'q' || e.key === 'Q') this.quickPick();
+      if (e.key === 'r' || e.key === 'R') this.rollRandom();
+      if (e.key === 'Enter' && this.randomDef) this.pick(this.randomDef);
     });
   }
 
+  /** Generate (or re-roll) a random play and show it big, with CALL IT / RE-ROLL / BACK. */
+  rollRandom() {
+    this.randomDef = randomPlay();
+    const def = this.randomDef;
+    this.cardLayer.removeAll(true);
+    const w = 420;
+    const h = 236;
+    const x = Math.round((VIEW_W - w) / 2);
+    const y = BAR_H + 34;
+    const items = [];
+    items.push(this.add.rectangle(x, y, w, h, 0x24304a).setOrigin(0).setStrokeStyle(2, PAL.lime));
+    items.push(new PixelText(this, x + w / 2, y + 8, def.name, PAL.lime, 3).setAlign(0.5));
+    items.push(new PixelText(this, x + w / 2, y + 30, `${OFFENSE_FORMATIONS[def.formation].name}${def.detail ? '  -  ' + def.detail : ''}`, PAL.white, 2).setAlign(0.5));
+    items.push(this.drawDiagram(def, x + 10, y + 46, w - 20, h - 92));
+    const btn = (bx, label, color, fn) => {
+      const b = this.add.rectangle(bx, y + h - 36, 124, 26, PAL.dusk).setOrigin(0).setStrokeStyle(2, color);
+      b.setInteractive({ useHandCursor: true }).on('pointerup', fn);
+      items.push(b, new PixelText(this, bx + 62, y + h - 28, label, color, 2).setAlign(0.5));
+    };
+    btn(x + 10, 'ENTER: CALL IT', PAL.lime, () => this.pick(def));
+    btn(x + w / 2 - 62, 'R: RE-ROLL', PAL.sand, () => this.rollRandom());
+    btn(x + w - 134, 'BACK', PAL.silver, () => { this.randomDef = null; this.showTab(this.tab); });
+    this.cardLayer.add(items);
+    this.tabs.forEach((t) => { t.bg.setFillStyle(PAL.dusk).setStrokeStyle(2, PAL.slate); t.label.setColor(PAL.white); });
+  }
+
   showTab(i) {
+    this.randomDef = null;
     this.tab = i;
     PlayCallScene.lastTab = i;
     this.tabs.forEach((t, k) => {
@@ -100,7 +137,7 @@ export class PlayCallScene extends Phaser.Scene {
       const ay = py(s.at[0]);
       const def = ROUTES[play.routes[slot]];
       if (def && def.points.length > 1) {
-        const out = Math.sign(s.at[0]) || 1;
+        const out = (Math.sign(s.at[0]) || 1) * (play.routeSign?.[slot] ?? 1);
         const pts = def.points.map(([o, u]) => ({ x: Math.min(x + w - 3, ax + u * sx), y: Phaser.Math.Clamp(ay + o * out * sy, y + 2, y + h - 2) }));
         const color = slot === play.runner ? PAL.orange : slot === play.fake ? PAL.sand : PAL.white;
         g.lineStyle(1, color, 1).strokePoints(pts);

@@ -156,6 +156,25 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 - **No possession change yet:** punts and field goals both lead to a new
   drive at your own 25.
 
+**RANDOM PLAY** (the button under the cards, or `R`) builds a brand-new play
+every time. It shows a preview, which you can re-roll (`R`) or call (`Enter`):
+
+- **Type:** run, pass or play action, each equally likely.
+- **Formation:** chosen to fit the type. Play action always comes from under
+  center.
+- **Pass:** every eligible receiver gets a different route from the route
+  tree, with at least one short, one medium and one deep route. The back
+  blocks or runs a short route.
+- **Run:** a random run type (inside or outside zone, power, dive, sweep or
+  draw), going left or right. Receivers block or run decoy routes.
+- **Play action:** the QB holds a short fake to the back, then drops back.
+  Routes lean toward medium and deep.
+- **Always new:** a random play never matches a designed play. The generator
+  re-rolls if it does.
+- **Linemen only block,** and routes stay in bounds.
+
+The route tree, run types and all weights are in `src/config/randomPlays.js`.
+
 Plays live in `src/plays/playbook.js`, formations in `src/plays/formations.js`
 and routes in `src/plays/routes.js`.
 
