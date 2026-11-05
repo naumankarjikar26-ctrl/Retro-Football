@@ -168,6 +168,7 @@ export class PlayController {
     this.keepAIInBounds();
     this.ball.update(dt);
 
+    if (this.phase === 'qb' && this.wantRB) this.giveToRB();
     if (this.phase === 'qb' && this.def.type === 'run') this.checkHandoff();
     if (this.phase === 'qb' || this.phase === 'run') this.checkCarrier();
   }
@@ -243,6 +244,36 @@ export class PlayController {
 
   /** The ball carrier on a run play (before he has the ball). */
   get runner() { return this.def.runner ? this.offenseBySlot[this.def.runner] : null; }
+
+  /**
+   * Click / tap the running back: the QB gets him the ball on any play.
+   * Before the snap this is queued and happens as soon as the QB has the ball.
+   */
+  giveToRB() {
+    const rb = this.offenseBySlot.RB;
+    if (!rb || rb.state === 'down' || this.handingOff) return false;
+    if (this.phase === 'presnap') { this.snap(); this.wantRB = true; return true; }
+    if (this.phase === 'snap') { this.wantRB = true; return true; }
+    if (this.phase !== 'qb' || this.ball.carrier !== this.qb || this.qb.state === 'throwing') return false;
+    this.handingOff = true;
+    this.wantRB = false;
+    rb.route = null;
+    const close = gdist(rb, this.qb) < yd(1.5);
+    if (close) {
+      this.ball.holdBy(rb);
+      this.startRun(rb);
+    } else {
+      // quick pitch that leads him
+      const t = Math.min(0.45, 0.15 + toYards(gdist(rb, this.qb)) * 0.03);
+      const to = rb.predict(t);
+      this.ball.launch(this.qb.x, this.qb.y, to.x, to.y, t, 4, () => {
+        this.ball.holdBy(rb);
+        if (this.phase === 'qb') this.startRun(rb);
+      });
+    }
+    bus.emit(EV.HANDOFF, { runner: rb });
+    return true;
+  }
 
   /** Run plays: hand off (inside) or pitch (toss) once the runner reaches the QB. */
   checkHandoff() {

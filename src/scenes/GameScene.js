@@ -113,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
     bus.emit(EV.PLAY_CALLED, def);
-    bus.emit(EV.HINT, def.type === 'run' ? 'PRESS / SPACE TO SNAP  -  A = AUDIBLE' : 'PRESS + PULL BACK: SNAP + THROW  -  A = AUDIBLE');
+    bus.emit(EV.HINT, def.type === 'run' ? 'PRESS / SPACE TO SNAP  -  A = AUDIBLE' : 'PULL BACK: THROW  -  TAP RB: RUN  -  A: AUDIBLE');
   }
 
   /** One audible per play, at the line: pass -> run, run -> quick pass. */
@@ -148,6 +148,12 @@ export class GameScene extends Phaser.Scene {
     if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the audible button
     const ph = this.play?.phase;
     if (ph === 'dead') { this.onAction(); return; }
+    // click / tap the running back: he gets the ball and runs it
+    if ((ph === 'presnap' || ph === 'snap' || ph === 'qb') && this.hitRB(p)) {
+      this.aim = null;
+      this.play.giveToRB();
+      return;
+    }
     // ball carrier: tap above / below him to cut that way
     if (ph === 'run' && this.play.carrier === this.play.controlled) {
       this.play.nudge(p.worldY < this.play.carrier.y ? -1 : 1);
@@ -174,6 +180,17 @@ export class GameScene extends Phaser.Scene {
     // released before the snap reached the QB: throw the moment he has it
     if (this.play.phase === 'snap') this.pendingThrow = target;
     else if (this.play.canThrow()) this.play.throwTo(target.x, target.y);
+  }
+
+  /** Is the pointer on (or right next to) the running back? */
+  hitRB(p) {
+    const rb = this.play?.offenseBySlot.RB;
+    if (!rb || rb.state === 'down' || this.play.handingOff) return false;
+    const b = rb.getBounds();
+    // the sprite frame is mostly empty: test a box around his body
+    const bodyW = 18;
+    const bodyH = 34;
+    return Math.abs(p.worldX - rb.x) <= bodyW / 2 + 4 && p.worldY <= rb.y + 6 && p.worldY >= rb.y - bodyH && !!b;
   }
 
   /** Pull vector -> power (0..1) and on-screen throw direction (opposite the pull). */

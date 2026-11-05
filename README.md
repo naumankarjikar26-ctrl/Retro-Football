@@ -81,6 +81,7 @@ Then open <http://localhost:8080>.
 | Audible (once per play, at the line) | `A` or the AUDIBLE button | Tap AUDIBLE |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
+| Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
 | Ball carrier cut | Press up / down (one press = one cut) | Tap above / below him |
 | Next play | `Space` / click | Tap |
