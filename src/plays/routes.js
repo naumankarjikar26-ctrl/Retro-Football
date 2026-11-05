@@ -37,6 +37,11 @@ export const ROUTES = {
   comeback:  { points: [[0, 0], [0, 15], [2, 12]], settle: true },
   deepCross: { points: [[0, 0], [0, 10], [-26, 20]] },
   checkdown: { points: [[0, 0], [1, 2], [1.5, 4]], settle: true },
+  // trick-play paths
+  fleaRun:   { points: [[0, 0], [0, 3.6]], settle: true },                          // tailback toward the line, stops short
+  statueRB:  { points: [[0, 0], [-1.6, -1.8], [-5, -1], [-8, 4], [-9, 18]], curve: true }, // behind the QB, then the other side
+  wrBack:    { points: [[0, 0], [1, -2.5], [2, -5]], settle: true },                 // slot drops behind the line
+  hookTrail: { points: [[0, 0], [0, 5], [5, 9], [9, 11], [12, 26]], curve: true },   // sprints past the curl
   // more run paths (I-form / singleback tailback starts straight behind the QB)
   runDive:    { points: [[0, 0], [0.3, 5], [0.6, 16]], curve: true },
   runPower:   { points: [[0, 0], [0.6, 5], [1.6, 7], [1.8, 18]], curve: true },

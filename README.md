@@ -78,7 +78,7 @@ Then open <http://localhost:8080>.
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
 | Call a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, `Q` = Quick Pick | Tap a tab, then a card |
-| Change play (at the line, 8 per half) | `C` or the CHANGE PLAY panel | Tap CHANGE PLAY |
+| Trick play (at the line, 4 per game) | `T` or the TRICK PLAY panel | Tap TRICK PLAY |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
@@ -154,32 +154,42 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 - **No possession change yet:** punts and field goals both lead to a new
   drive at your own 25.
 
-**CHANGE PLAY** sits in the bottom-right corner at the line. Pressing it (or
-`C`) swaps in a brand-new random play before the snap. You get 8 per half:
-each signal icon on the panel is one change left. The box shrinks as you use
-them: the title gets smaller and then drops out, and at zero the panel
-disappears. The
-count is `changePlaysPerHalf` in `src/config/constants.js`. Until a game clock
-exists there's no halftime, so for now the 8 last the whole game.
-`GameState.startHalf()` refills them.
+**TRICK PLAY** sits in the bottom-right corner at the line. Pressing it (or
+`T`) calls a real trick play. You get 4 per game, shown as 4 icons. The box
+shrinks with each one you use and is grayed out when they're gone.
 
-How the generator builds a play:
+- **Picks:** each trick is drawn at random from a shuffled bag, so none repeats
+  until all of them have been used.
+- **Display:** "TRICK PLAY: NAME" shows at the top of the field, and routes and
+  paths are drawn as normal.
+- **Stopped tricks:** a trick that gets stopped still counts as used.
 
-- **Type:** run, pass or play action, each equally likely.
-- **Formation:** chosen to fit the type. Play action always comes from under
-  center.
-- **Pass:** every eligible receiver gets a different route from the route
-  tree, with at least one short, one medium and one deep route. The back
-  blocks or runs a short route.
-- **Run:** a random run type (inside or outside zone, power, dive, sweep or
-  draw), going left or right. Receivers block or run decoy routes.
-- **Play action:** the QB holds a short fake to the back, then drops back.
-  Routes lean toward medium and deep.
-- **Always new:** a random play never matches a designed play. The generator
-  re-rolls if it does.
-- **Linemen only block,** and routes stay in bounds.
+| Trick play | What happens |
+| --- | --- |
+| Flea Flicker | Handoff to the RB, who stops short and pitches it back to the QB; you throw deep (go, post, deep cross). LBs and safeties bite toward the line. |
+| Statue of Liberty | The QB drops back and holds the ball up as if to throw; the RB comes around behind him, takes it from his hand and runs the other way. The defense drops for the fake throw. |
+| QB Draw | It looks like a pass: receivers go deep and the line pass-blocks, then the QB takes off up the middle (you control him). |
+| WR Pass | Backward lateral to the slot receiver behind the line; you throw deep with the WR. The QB slips out as a check-down. |
+| Hook and Lateral | Throw to the curl; the trailing receiver shadows him and gets the lateral at full speed (you control him). |
 
-The route tree, run types and all weights are in `src/config/randomPlays.js`.
+**Rules for every trick play:**
+
+- **Pitches and laterals** only go sideways or backward. If there's no legal
+  angle in time, the holder keeps the ball and it becomes a run.
+- **Fumbles:** a dropped pitch or lateral is a live ball, and either team can
+  recover it (`lateralDropChance` in `src/config/constants.js`). A defender
+  recovering it ends the drive, because possession changes don't exist yet.
+- **Early defenders:** if a defender reaches the ball holder before a handoff,
+  pitch or lateral, the holder keeps it and it becomes a run.
+
+**Adding a trick play:** trick plays are data in `src/plays/trickPlays.js`. Each
+has a formation, routes, a defensive "bite", and a list of steps: `handoff`,
+`takeFromHand`, `pitch`, `lateral`, `fakeThrow`, `dropback`, `trail`, `route`,
+`throw` (by any player), `afterCatch` and `run`. `src/systems/TrickRunner.js`
+runs them, so a new trick play is just a new entry in that file.
+
+(The earlier random-play generator, `src/plays/randomPlay.js` with
+`src/config/randomPlays.js`, is still in the code but no longer has a button.)
 
 Plays live in `src/plays/playbook.js`, formations in `src/plays/formations.js`
 and routes in `src/plays/routes.js`.

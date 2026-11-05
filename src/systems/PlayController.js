@@ -21,6 +21,7 @@ import { updateOffense, nearest } from '../ai/OffenseAI.js';
 import { updateDefense } from '../ai/DefenseAI.js';
 import { bus, EV } from './events.js';
 import { CATCHING } from '../config/catching.js';
+import { TrickRunner } from './TrickRunner.js';
 
 export class PlayController {
   constructor(scene, gameState, playDef) {
@@ -96,10 +97,15 @@ export class PlayController {
     // everyone comes out of their stance; the first frames of the run/block
     // animations take over from the crouch
     for (const p of [...this.offense, ...this.defense]) p.stance = null;
+    if (this.def.type === 'trick') {
+      this.trick = new TrickRunner(this, this.def.trick);
+      this.controlled = null; // the trick moves people until it hands you the ball
+    }
     const qb = this.qb;
     this.ball.launch(this.losX, this.ballY, qb.x, qb.y, TUNING.snapTime, 3, () => {
       this.ball.holdBy(qb);
       if (this.phase === 'snap') this.phase = 'qb';
+      this.trick?.start();
     }, 2, CATCH_Z);
     // under center: a real 5-step drop; shotgun: a short drift
     const underCenter = this.losX - qb.x < yd(3);
@@ -110,9 +116,13 @@ export class PlayController {
     else bus.emit(EV.HINT, 'HANDOFF...');
   }
 
+  /** Who throws: the QB, or on a trick play whoever the trick hands the throw to. */
+  get passer() { return this.trickPasser || this.qb; }
+
   canThrow() {
-    return this.phase === 'qb' && this.ball.carrier === this.qb && this.qb.state !== 'throwing'
-      && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3) && this.isPassPlay;
+    const q = this.passer;
+    return this.phase === 'qb' && this.ball.carrier === q && q.state !== 'throwing'
+      && q.state !== 'down' && q.x <= this.losX + yd(0.3) && (this.isPassPlay || !!this.trickThrowReady);
   }
 
   /**
@@ -121,14 +131,14 @@ export class PlayController {
    * (60 yards: ~2.4 s in the air, ~44 px high).
    */
   throwParams(tx, ty) {
-    const q = this.qb;
+    const q = this.passer;
     const dist = toYards(gdist(q, { x: tx, y: ty }));
     return { dist, duration: 0.35 + dist * 0.034, peak: (2 + dist * 0.7) * (PX_PER_YARD / 7) };
   }
 
   throwTo(tx, ty) {
     if (!this.canThrow()) return false;
-    const q = this.qb;
+    const q = this.passer;
     tx = Phaser.Math.Clamp(tx, 4, WORLD_W - 4);
     ty = Phaser.Math.Clamp(ty, 4, WORLD_H - 4);
     const { dist, duration, peak } = this.throwParams(tx, ty);
@@ -173,6 +183,8 @@ export class PlayController {
     this.keepAIInBounds();
     this.ball.update(dt);
 
+    if (this.trick) this.trick.update();
+    if (this.phase === 'loose') this.updateLoose();
     if (this.phase === 'qb' && this.wantRB) this.giveToRB();
     if (this.phase === 'qb' && this.def.type === 'run') this.checkHandoff();
     if (this.phase === 'qb' && this.isKick && !this.kicked && this.time - this.snapTime > 0.55) this.kick();
@@ -186,6 +198,9 @@ export class PlayController {
       return;
     }
     const hasKeys = input.dx !== 0 || input.dy !== 0;
+
+    // trick plays: the trick runner moves people until it's a run; a passer stands and throws
+    if (this.def.type === 'trick' && this.phase !== 'run') { if (p.state !== 'throwing') p.stop(); return; }
 
     if (p === this.qb && this.phase !== 'run') {
       if (p.state === 'throwing') return;
@@ -261,7 +276,7 @@ export class PlayController {
     let best = null;
     let bestScore = Infinity;
     for (const r of this.receivers) {
-      if (r.state === 'down' || r.state === 'tackled') continue;
+      if (r.state === 'down' || r.state === 'tackled' || r === this.passer) continue;
       const d = gdist(r, spot);
       const shortBy = Math.max(0, d - yd(r.maxSpeed) * flightTime); // how far off he'd still be
       if (shortBy > yd(CATCHING.trackRadiusYd)) continue;
@@ -273,6 +288,37 @@ export class PlayController {
 
   /** Play action: the back carrying out the fake. */
   get fakeRunner() { return this.def.fake ? this.offenseBySlot[this.def.fake] : null; }
+
+  /** A dropped pitch / lateral: the ball is live on the ground. */
+  fumble(x, y) {
+    this.phase = 'loose';
+    this.controlled = null;
+    this.carrier = null;
+    this.ball.placeAt(x, y);
+    bus.emit(EV.POPUP, { text: 'FUMBLE!', x, y, color: 'bad' });
+  }
+
+  /** Loose ball: the first player to reach it recovers. */
+  updateLoose() {
+    const b = { x: this.ball.gx, y: this.ball.gy };
+    let best = null;
+    let bestD = yd(0.9);
+    for (const p of [...this.offense, ...this.defense]) {
+      if (p.state === 'down' || p.state === 'tackled') continue;
+      const d = gdist(p, b);
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    if (!best) return;
+    if (this.offense.includes(best)) {
+      this.ball.holdBy(best);
+      bus.emit(EV.POPUP, { text: 'RECOVERED!', x: best.x, y: best.y, color: 'good' });
+      this.startRun(best);
+    } else {
+      this.ball.holdBy(best);
+      bus.emit(EV.POPUP, { text: 'FUMBLE LOST', x: best.x, y: best.y, color: 'bad' });
+      this.end({ type: 'fumble' });
+    }
+  }
 
   get isPassPlay() { return ['pass', 'screen', 'pa'].includes(this.def.type); }
   get isKick() { return this.def.type === 'punt' || this.def.type === 'fg'; }
@@ -454,8 +500,8 @@ export class PlayController {
   /** Tackles, sacks, sidelines, goal lines. */
   checkCarrier() {
     if (this.tackling) return;
-    const c = this.phase === 'qb' ? this.qb : this.carrier;
-    if (!c || c.state === 'down' || c.state === 'tackled') return;
+    const c = this.phase === 'qb' ? (this.ball.carrier || this.qb) : this.carrier;
+    if (!c || c.state === 'down' || c.state === 'tackled' || !this.offense.includes(c)) return;
 
     if (this.phase === 'run' && c.x >= yardToX(100)) {
       c.stop();

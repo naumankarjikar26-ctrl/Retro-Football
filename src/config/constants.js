@@ -96,7 +96,8 @@ export const TUNING = {
   jukeTime: 0.16,          // seconds the sidestep takes
   jukeEvadeWindow: 0.25,   // extra seconds after it when tacklers tend to whiff
   jukeEvadeChance: 0.8,    // chance a tackle attempt in that window misses
-  changePlaysPerHalf: 8,   // CHANGE PLAY uses per half
+  trickPlaysPerGame: 4,    // TRICK PLAY uses per game
+  lateralDropChance: 0.07, // chance a pitch / lateral is dropped (fumble)
   paFakeTime: 0.45,        // play action: QB holds the fake this long before dropping
   jukeCooldown: 0.3,       // seconds before the next juke
   jukeSlowdown: 0.75,      // speed while recovering from a juke (fraction of top speed)

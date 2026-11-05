@@ -13,7 +13,7 @@ import { CameraController } from '../camera/CameraController.js';
 import { GameState } from '../systems/GameState.js';
 import { PlayController } from '../systems/PlayController.js';
 import { playById } from '../plays/playbook.js';
-import { randomPlay } from '../plays/randomPlay.js';
+import { TRICK_PLAYS, trickById } from '../plays/trickPlays.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 import { nearest } from '../ai/OffenseAI.js';
@@ -42,7 +42,7 @@ export class GameScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER');
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
-    this.input.keyboard.on('keydown-C', () => this.changePlay());
+    this.input.keyboard.on('keydown-T', () => this.trickPlay());
     // ball carrier cuts: one press = one cut (no holding)
     for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(-1));
     for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(1));
@@ -115,22 +115,28 @@ export class GameScene extends Phaser.Scene {
     bus.emit(EV.PRESNAP, this.gs);
     bus.emit(EV.PLAY_CALLED, def);
     const hints = {
-      run: 'PRESS / SPACE TO SNAP  -  C: CHANGE PLAY',
+      run: 'PRESS / SPACE TO SNAP  -  T: TRICK PLAY',
+      trick: 'PRESS / SPACE TO SNAP THE TRICK PLAY',
       punt: 'PRESS / SPACE TO SNAP AND PUNT',
       fg: 'PRESS / SPACE TO SNAP AND KICK',
     };
-    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  C: CHANGE PLAY');
+    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  T: TRICK PLAY');
   }
 
   /**
-   * CHANGE PLAY at the line: swaps in a brand-new random play. Limited to
-   * TUNING.changePlaysPerHalf per half (tracked in GameState).
+   * TRICK PLAY at the line: swaps in a real trick play (4 per game). Picked
+   * from a shuffled bag, so no trick repeats until every one has been used.
+   * It counts as used even if the defense stops it.
    */
-  changePlay() {
+  trickPlay() {
     if (this.calling || !this.play || this.play.phase !== 'presnap') return;
-    if (this.gs.changePlaysLeft <= 0) return;
-    this.gs.changePlaysLeft -= 1;
-    this.startPlay(randomPlay());
+    const id = this.gs.nextTrick(TRICK_PLAYS.map((t) => t.id));
+    if (!id) return;
+    const t = trickById(id);
+    this.startPlay({
+      ...t, id: `trick-${t.id}`, name: `TRICK PLAY: ${t.name}`, banner: true, cat: 'trick', type: 'trick',
+      defense: 'nickel', blocking: { LT: 'DE1', LG: 'DT1', C: null, RG: 'DT2', RT: 'DE2' }, trick: t,
+    });
   }
 
   onAction() {
@@ -153,7 +159,7 @@ export class GameScene extends Phaser.Scene {
 
   onPointerDown(p) {
     if (this.calling || !this.play) return;
-    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the CHANGE PLAY panel
+    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the TRICK PLAY panel
     const ph = this.play?.phase;
     if (ph === 'dead') { this.onAction(); return; }
     // click / tap the running back: he gets the ball and runs it
@@ -170,7 +176,7 @@ export class GameScene extends Phaser.Scene {
     // one motion: pressing snaps the ball AND starts the pull-back
     if (ph === 'presnap') this.play.snap();
     // anywhere on screen starts the pull; it is measured from this press point
-    if (!this.play.qbScrambling && this.play.isPassPlay) {
+    if (!this.play.qbScrambling && (this.play.isPassPlay || this.play.def.type === 'trick')) {
       this.aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y, id: p.id };
     }
   }

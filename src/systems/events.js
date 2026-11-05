@@ -13,6 +13,7 @@ export const EV = {
   BROKEN_TACKLE: 'brokenTackle', // ({ carrier, tackler })
   POPUP: 'popup',               // ({ text, x, y, color }) short text over the play
   JUKE: 'juke',                 // ({ carrier, dir })
+  LATERAL: 'lateral',           // ({ from, to }) pitch / lateral completed
   HANDOFF: 'handoff',           // ({ runner })
   PLAY_CALLED: 'playCalled',    // (playDef)
   AUDIBLE: 'audible',           // (newPlayDef)

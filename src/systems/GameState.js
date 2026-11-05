@@ -9,13 +9,16 @@ export class GameState {
     this.score = { home: 0, away: 0 };
     this.quarter = 1;
     this.newDrive(25);
-    this.startHalf();
+    this.trickPlaysLeft = TUNING.trickPlaysPerGame;
     // Stage 5: playClock, challengesLeft, half. Stage 4: hardCountHistory.
   }
 
-  /** New half: refill the CHANGE PLAY uses. (Call at halftime once a game clock exists.) */
-  startHalf() {
-    this.changePlaysLeft = TUNING.changePlaysPerHalf;
+  /** Trick plays: 4 per game, picked from a shuffled bag so none repeats until all are used. */
+  nextTrick(ids) {
+    if (this.trickPlaysLeft <= 0) return null;
+    if (!this.trickBag?.length) this.trickBag = Phaser.Utils.Array.Shuffle([...ids]);
+    this.trickPlaysLeft -= 1;
+    return this.trickBag.pop();
   }
 
   /** Each player's skin tone is picked once and kept for the whole game (Stage 6: from the roster). */
@@ -69,6 +72,10 @@ export class GameState {
       const net = Math.round(r.endYard - start);
       this.newDrive(25);
       return { headline: r.endYard >= 100 ? 'TOUCHBACK' : `PUNT ${net} YDS`, detail: 'NEW DRIVE AT OWN 25' };
+    }
+    if (r.type === 'fumble') {
+      this.newDrive(25); // possession changes arrive later: next drive
+      return { headline: 'FUMBLE LOST', detail: 'NEW DRIVE AT OWN 25' };
     }
     if (r.type === 'interception') {
       // possession changes arrive with the defense stage; for now a new drive

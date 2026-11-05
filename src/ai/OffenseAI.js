@@ -10,6 +10,7 @@ export function updateOffense(play, dt) {
   for (const p of play.offense) {
     if (p.state === 'down' || p === play.controlled) continue;
     if (phase === 'presnap' || phase === 'dead') { p.stop(); continue; }
+    if (phase === 'loose') { p.moveToward(play.ball.gx, play.ball.gy, 1); continue; } // fumble!
 
     if (phase === 'run') { blockDownfield(p, play, time); continue; }
 

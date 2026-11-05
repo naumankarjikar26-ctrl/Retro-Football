@@ -44,14 +44,14 @@ export class HUDScene extends Phaser.Scene {
     // current play name (bottom-left of the field)
     this.playName = new PixelText(this, 6, VIEW_H - HINT_H - 14, '', PAL.sand, 2);
 
-    // CHANGE PLAY panel (bottom-right): swaps in a new random play at the line.
+    // TRICK PLAY panel (bottom-right): calls a real trick play at the line.
     // Each signal icon is one change left this half.
     this.buildChangePlay();
     // random plays: show the play type at the top of the field
     this.randomLabel = new PixelText(this, VIEW_W / 2, BAR_H + 6, '', PAL.sand, 3).setAlign(0.5).setVisible(false);
     bus.on(EV.PLAY_CALLED, (def) => {
       this.playName.setText(def.detail ? `${def.name} - ${def.detail}` : def.name);
-      this.randomLabel.setText(def.random ? def.name : '').setVisible(!!def.random);
+      this.randomLabel.setText(def.random || def.banner ? def.name : '').setVisible(!!(def.random || def.banner));
     }, this);
     bus.on(EV.SNAP, () => this.randomLabel.setVisible(false), this);
 
@@ -68,20 +68,20 @@ export class HUDScene extends Phaser.Scene {
     const g = this.gameScene;
     this.playName.setVisible(!!g.play && !g.calling);
     const atLine = !!g.play && !g.calling && g.play.phase === 'presnap';
-    if (atLine && this.cpShown !== g.gs.changePlaysLeft) this.drawChangePlay(g.gs.changePlaysLeft);
-    this.cpPanel.setVisible(atLine && g.gs.changePlaysLeft > 0);
+    if (atLine && this.cpShown !== g.gs.trickPlaysLeft) this.drawChangePlay(g.gs.trickPlaysLeft);
+    this.cpPanel.setVisible(atLine);
   }
 
   buildChangePlay() {
     this.cpH = 58;
     this.cpPanel = this.add.container(0, VIEW_H - HINT_H - this.cpH - 6).setVisible(false);
     this.cpGfx = this.add.graphics();
-    this.cpTitle = new PixelText(this, 0, 8, 'CHANGE PLAY', PAL.white, 3).setAlign(0.5);
-    this.cpTitleSmall = new PixelText(this, 0, 10, 'CHANGE PLAY', PAL.white, 2).setAlign(0.5);
+    this.cpTitle = new PixelText(this, 0, 8, 'TRICK PLAY', PAL.white, 3).setAlign(0.5);
+    this.cpTitleSmall = new PixelText(this, 0, 10, 'TRICK PLAY', PAL.white, 2).setAlign(0.5);
     this.cpHit = this.add.rectangle(0, 0, 10, this.cpH, 0x000000, 0.001).setOrigin(0);
     this.cpPanel.add([this.cpGfx, this.cpTitle, this.cpTitleSmall, this.cpHit]);
     this.cpHit.setInteractive({ useHandCursor: true });
-    this.cpHit.on('pointerup', () => this.gameScene.changePlay());
+    this.cpHit.on('pointerup', () => this.gameScene.trickPlay());
   }
 
   /**
@@ -93,22 +93,29 @@ export class HUDScene extends Phaser.Scene {
     this.cpShown = left;
     const g = this.cpGfx;
     g.clear();
-    if (left <= 0) { this.cpPanel.setVisible(false); return; }
     const gap = 22;
     const pad = 14;
-    const W = Math.max(36, left * gap + pad * 2 - (gap - 14));
+    // shrinks with each use; when none are left it stays as a grayed-out button
+    const W = left > 0 ? Math.max(36, left * gap + pad * 2 - (gap - 14)) : 104;
+    const col = left > 0 ? PAL.white : PAL.slate;
     const H = this.cpH;
     this.cpPanel.x = VIEW_W - W - 8; // anchored to the right edge
     this.cpHit.setSize(W, H);
     this.cpHit.input.hitArea.setSize(W, H);
-    g.fillStyle(PAL.ink, 0.9).fillRoundedRect(0, 0, W, H, 6);
-    g.lineStyle(2, PAL.white, 1).strokeRoundedRect(1, 1, W - 2, H - 2, 6);
+    g.fillStyle(PAL.ink, left > 0 ? 0.9 : 0.6).fillRoundedRect(0, 0, W, H, 6);
+    g.lineStyle(2, col, 1).strokeRoundedRect(1, 1, W - 2, H - 2, 6);
+    this.cpTitle.setColor(col);
+    this.cpTitleSmall.setColor(col);
     const bigFits = this.cpTitle.textWidth + 12 <= W;
     const smallFits = this.cpTitleSmall.textWidth + 10 <= W;
     this.cpTitle.setVisible(bigFits).setPosition(W / 2, 8);
     this.cpTitleSmall.setVisible(!bigFits && smallFits).setPosition(W / 2, 10);
     const hasTitle = bigFits || smallFits;
     const cy = hasTitle ? 41 : H / 2;
+    if (left <= 0) {
+      this.cpTitleSmall.setVisible(true).setPosition(W / 2, H / 2 - 5);
+      return;
+    }
     const x0 = W / 2 - ((left - 1) * gap) / 2;
     for (let i = 0; i < left; i++) {
       const cx = Math.round(x0 + i * gap) - 4;

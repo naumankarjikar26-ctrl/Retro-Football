@@ -15,6 +15,7 @@ export function updateDefense(play, dt) {
     const slow = d.engaged ? 0.15 : 1;
 
     if (phase === 'presnap' || phase === 'dead') { d.stop(); continue; }
+    if (phase === 'loose') { d.moveToward(play.ball.gx, play.ball.gy, slow); continue; } // fumble!
 
     if (phase === 'run') {
       pursue(d, play.carrier, slow);
@@ -30,6 +31,13 @@ export function updateDefense(play, dt) {
         d.moveToward(land.x, land.y, CATCHING.defenseBreakSpeed * slow);
         continue;
       }
+    }
+
+    // trick plays: the chosen defenders chase the fake for a moment
+    if (play.bite && time < play.bite.until && play.bite.roles.includes(d.role) && phase !== 'run') {
+      const t = play.bite.toward;
+      d.moveToward(t.x, t.y, slow);
+      continue;
     }
 
     // play action: linebackers bite on the fake for a moment
