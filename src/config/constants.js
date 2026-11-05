@@ -91,9 +91,12 @@ export const TUNING = {
   maxThrowYd: 60,          // throw length at full pull
   catchRadiusYd: 1.7,
   tackleRadiusYd: 1.15,
-  // Ball carrier cuts: each press moves him this many yards sideways
-  cutYards: 5,
-  cutSharpness: 2.6,       // how hard he angles while cutting (higher = snappier)
+  // Ball carrier jukes (one up/down press = one juke)
+  jukeYards: 2.5,          // sidestep distance
+  jukeTime: 0.16,          // seconds the sidestep takes
+  jukeEvadeWindow: 0.25,   // extra seconds after it when tacklers tend to whiff
+  jukeEvadeChance: 0.8,    // chance a tackle attempt in that window misses
+  jukeCooldown: 0.3,       // seconds before the next juke
   // Chance a ball carrier escapes a tackle attempt (3 in 8). Later: from ratings.
   brokenTackleChance: 3 / 8,
   tackleRetryDelay: 1.0,     // seconds before a whiffed defender may try again

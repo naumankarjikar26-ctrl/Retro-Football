@@ -201,19 +201,31 @@ export class PlayController {
       return;
     }
 
-    // Ball carrier: always runs straight downfield. Each press of up/down (or a
-    // tap above/below him) cuts him over one lane; he then runs straight again.
-    const toLane = this.laneY - p.y;
-    const dy = Phaser.Math.Clamp(toLane / ydLat(0.6), -1, 1) * TUNING.cutSharpness;
-    p.moveDir(1, dy, 1);
+    // Ball carrier: always runs straight downfield. Jukes (up/down presses)
+    // snap him sideways; he never drifts at an angle.
+    p.moveDir(1, 0, 1);
   }
 
   /** Cut one lane up (-1) or down (+1). Called on a key press / tap, not a hold. */
+  /**
+   * Juke: a quick sidestep (jukeYards in jukeTime) with a lean, while still
+   * running forward. For a moment after it, defenders who reach him mostly whiff.
+   */
   nudge(dir) {
-    if (this.phase !== 'run' || !this.carrier || this.carrier !== this.controlled) return;
-    const top = FIELD_TOP - ydLat(1);      // let him step out only if you steer him there
+    const c = this.carrier;
+    if (!c || this.phase !== 'run' || c !== this.controlled || c.state === 'down' || c.state === 'tackled') return;
+    if (this.time < (this.jukeReadyAt || 0)) return; // short cooldown between jukes
+    this.jukeReadyAt = this.time + TUNING.jukeCooldown;
+    this.jukeUntil = this.time + TUNING.jukeTime + TUNING.jukeEvadeWindow;
+    const top = FIELD_TOP - ydLat(1);      // he may step out only if you take him there
     const bottom = FIELD_BOTTOM + ydLat(1);
-    this.laneY = Phaser.Math.Clamp(this.laneY + dir * ydLat(TUNING.cutYards), top, bottom);
+    const ty = Phaser.Math.Clamp(c.y + dir * ydLat(TUNING.jukeYards), top, bottom);
+    const tw = this.scene.tweens;
+    tw.killTweensOf(c);
+    c.angle = 0;
+    tw.add({ targets: c, y: ty, duration: TUNING.jukeTime * 1000, ease: 'Quad.Out' });
+    tw.add({ targets: c, angle: dir * 14, duration: TUNING.jukeTime * 500, yoyo: true, ease: 'Sine.Out', onComplete: () => { c.angle = 0; } });
+    bus.emit(EV.JUKE, { carrier: c, dir });
   }
 
   /** Only the player the user controls may ever step out of bounds. */
@@ -443,6 +455,12 @@ export class PlayController {
       if (d.state === 'down' || d.engaged || this.time < (d.ai.noTackleUntil || 0)) continue;
       if (gdist(d, c) > radius) continue;
 
+      // right after a juke, defenders who reach him mostly bite and whiff
+      const juking = this.phase === 'run' && this.time < (this.jukeUntil || 0);
+      if (juking && Math.random() < TUNING.jukeEvadeChance) {
+        this.brokenTackle(c, d, false);
+        continue;
+      }
       if (this.phase === 'run' && Math.random() < TUNING.brokenTackleChance) {
         this.brokenTackle(c, d);
         continue;
@@ -452,9 +470,9 @@ export class PlayController {
   }
 
   /** Whiff: the carrier stumbles and keeps going, the defender dives past and goes down. */
-  brokenTackle(c, d) {
+  brokenTackle(c, d, stumble = true) {
     d.ai.noTackleUntil = this.time + TUNING.tackleRetryDelay;
-    c.stumble(0.3);
+    if (stumble) c.stumble(0.3); // a juked defender just misses: no stumble
     // dive past in the direction he was moving
     const len = Math.hypot(d.vel.x, d.vel.y) || 1;
     const ux = d.vel.x / len;

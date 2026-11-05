@@ -83,7 +83,7 @@ Then open <http://localhost:8080>.
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
-| Ball carrier cut | Press up / down (one press = one cut) | Tap above / below him |
+| Ball carrier juke | Press up / down (one press = one juke) | Tap above / below him |
 | Next play | `Space` / click | Tap |
 
 **Throwing works like a slingshot, in one motion.** Pressing snaps the ball.
@@ -99,8 +99,10 @@ the ball to go. The pull is measured from the spot you first pressed:
 
 **Running with the ball:** after a catch or handoff, the ball carrier runs
 straight downfield on his own. Each press of up or down (or a tap above or
-below him) cuts him about 5 yards over (`cutYards` in
-`src/config/constants.js`).
+below him) is a **juke**: a quick 2.5-yard sidestep with a lean. For a moment
+afterwards, a defender who reaches him usually whiffs. Time it just before
+contact. The juke values are in `src/config/constants.js` (`jukeYards`,
+`jukeEvadeChance` and friends).
 
 ## Catching
 
