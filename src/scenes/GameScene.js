@@ -355,10 +355,10 @@ export class GameScene extends Phaser.Scene {
     const zz = 1 / this.cameras.main.zoom; // keep ends the same on-screen size at any zoom
     const draw = (pts, color, end) => {
       const sh = pts.map((p) => ({ x: p.x, y: p.y + 1 }));
-      // thick route lines, same on-screen thickness at any camera zoom
+      // thin route lines, same on-screen thickness at any camera zoom
       const z = 1 / this.cameras.main.zoom;
-      stroke(sh, PAL.ink, 7 * z, 0.55);
-      stroke(pts, color, 5 * z, 1);
+      stroke(sh, PAL.ink, 5 * z, 0.55);
+      stroke(pts, color, 3 * z, 1);
       const e = pts[pts.length - 1];
       const b = pts[pts.length - 2];
       const len = Math.hypot(e.x - b.x, e.y - b.y) || 1;
@@ -371,14 +371,14 @@ export class GameScene extends Phaser.Scene {
             e.x - ux * s * 0.6 - uy * s + o.x, e.y - uy * s * 0.6 + ux * s + o.y,
             e.x - ux * s * 0.6 + uy * s + o.x, e.y - uy * s * 0.6 - ux * s + o.y);
         };
-        tri(PAL.ink, { x: 0, y: 1 }, 9 * zz);
-        tri(color, { x: 0, y: 0 }, 7.5 * zz);
+        tri(PAL.ink, { x: 0, y: 1 }, 6 * zz);
+        tri(color, { x: 0, y: 0 }, 5 * zz);
       } else if (end === 'dot') {
-        g.fillStyle(PAL.ink, 1).fillCircle(e.x, e.y + 1, 6 * zz);
-        g.fillStyle(color, 1).fillCircle(e.x, e.y, 4.5 * zz);
+        g.fillStyle(PAL.ink, 1).fillCircle(e.x, e.y + 1, 4.5 * zz);
+        g.fillStyle(color, 1).fillCircle(e.x, e.y, 3.5 * zz);
       } else if (end === 'tee') {
-        g.lineStyle(7 * zz, PAL.ink, 0.55).lineBetween(e.x - uy * 7 * zz, e.y + ux * 7 * zz + 1, e.x + uy * 7 * zz, e.y - ux * 7 * zz + 1);
-        g.lineStyle(5 * zz, color, 1).lineBetween(e.x - uy * 6 * zz, e.y + ux * 6 * zz, e.x + uy * 6 * zz, e.y - ux * 6 * zz);
+        g.lineStyle(5 * zz, PAL.ink, 0.55).lineBetween(e.x - uy * 6 * zz, e.y + ux * 6 * zz + 1, e.x + uy * 6 * zz, e.y - ux * 6 * zz + 1);
+        g.lineStyle(3 * zz, color, 1).lineBetween(e.x - uy * 5 * zz, e.y + ux * 5 * zz, e.x + uy * 5 * zz, e.y - ux * 5 * zz);
       }
     };
 
