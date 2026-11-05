@@ -49,7 +49,8 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     this.vel = new Phaser.Math.Vector2();
     this.desired = new Phaser.Math.Vector2();
-    this.maxSpeed = this.ratings.speed;      // yards / second
+    // yards / second; scaled down overall (and a bit more for the pass rush)
+    this.maxSpeed = this.ratings.speed * TUNING.playerSpeedScale * (role === 'DL' ? TUNING.rushSpeedScale : 1);
     this.facing = this.isOffense ? 'E' : 'W';
     this.state = 'idle';                      // idle | moving | throwing | down
     this.speedScale = 1;

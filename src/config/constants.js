@@ -21,8 +21,8 @@ export const HINT_H = 19;
 export const FIELD_VIEW_H = VIEW_H - BAR_H - HINT_H; // 161
 
 export const PX_PER_YARD = 19.2;            // ~33 yards visible across the 640px view
-export const FIELD_WIDTH_YD = 160 / 3;               // 53.33 yd
-export const FIELD_PX_H = 410;                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
+export const FIELD_WIDTH_YD = 60;                    // wider than a real field (53.3 yd) to give out routes room
+export const FIELD_PX_H = 461;   // keeps the same on-screen scale as before                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
 export const LAT_SCALE = FIELD_PX_H / (FIELD_WIDTH_YD * PX_PER_YARD); // ~0.41
 export const yd = (yards) => yards * PX_PER_YARD;                // downfield yards -> px (x)
 export const ydLat = (yards) => yards * PX_PER_YARD * LAT_SCALE; // lateral yards -> px (y)
@@ -96,6 +96,8 @@ export const TUNING = {
   jukeTime: 0.16,          // seconds the sidestep takes
   jukeEvadeWindow: 0.25,   // extra seconds after it when tacklers tend to whiff
   jukeEvadeChance: 0.8,    // chance a tackle attempt in that window misses
+  playerSpeedScale: 0.85,  // everyone runs at this fraction of their rating
+  rushSpeedScale: 0.85,    // pass rushers slowed a bit more, for time to throw
   trickPlaysPerGame: 4,    // TRICK PLAY uses per game
   lateralDropChance: 0.07, // chance a pitch / lateral is dropped (fumble)
   paFakeTime: 0.45,        // play action: QB holds the fake this long before dropping
