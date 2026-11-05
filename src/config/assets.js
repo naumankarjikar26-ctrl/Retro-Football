@@ -14,7 +14,9 @@ export const PLAYER_FRAME = { width: 64, height: 64 };
 // The character's feet sit at y=47 inside the 64x64 frame.
 export const PLAYER_ORIGIN = { x: 0.5, y: 47 / 64 };
 // Height of the hands above the feet (px) — where a carried ball is drawn.
-export const HAND_HEIGHT = 11;
+// Players are drawn this much bigger than the sheet's pixels.
+export const PLAYER_SCALE = 1.12;
+export const HAND_HEIGHT = 11 * PLAYER_SCALE;
 
 export const PLAYER_ANIMS = {
 // Sheets in assets/players/v3/ are built by tools/build_sprites.py from the

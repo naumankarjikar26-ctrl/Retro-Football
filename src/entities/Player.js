@@ -7,7 +7,7 @@
 // field's Y axis is foreshortened by LAT_SCALE.
 
 import { TUNING, LAT_SCALE, yd, toYards } from '../config/constants.js';
-import { PLAYER_ORIGIN } from '../config/assets.js';
+import { PLAYER_ORIGIN, PLAYER_SCALE } from '../config/assets.js';
 import { SKIN_TONES } from '../config/teams.js';
 
 const DIRS_BY_OCTANT = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
@@ -60,7 +60,8 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     // (x, y) is the player's feet; lower on screen = closer to the camera = drawn in front
     this.setOrigin(PLAYER_ORIGIN.x, PLAYER_ORIGIN.y);
-    this.shadow = scene.add.image(x, y, 'playershadow').setAlpha(0.32).setDepth(5);
+    this.setScale(PLAYER_SCALE);
+    this.shadow = scene.add.image(x, y, 'playershadow').setScale(PLAYER_SCALE).setAlpha(0.32).setDepth(5);
     scene.add.existing(this);
     this.playAnim('idle');
   }
@@ -182,19 +183,19 @@ export class Player extends Phaser.GameObjects.Sprite {
     // freeze on the first standing frame of the current facing
     this.playAnim('idle', true);
     this.anims.pause(this.anims.currentAnim.frames[0]);
-    const body = this.height * 0.55; // distance from feet to the middle of the body
+    const body = this.displayHeight * 0.55; // distance from feet to the middle of the body
     this.scene.tweens.add({ targets: this, angle: 90 * side, duration, ease: 'Quad.In' });
     this.scene.tweens.add({
       targets: this, shadowDX: side * body, duration, ease: 'Quad.In',
     });
-    this.scene.tweens.add({ targets: this.shadow, scaleX: 1.7, scaleY: 0.8, alpha: 0.24, duration, ease: 'Quad.In' });
+    this.scene.tweens.add({ targets: this.shadow, scaleX: 1.7 * PLAYER_SCALE, scaleY: 0.8 * PLAYER_SCALE, alpha: 0.24, duration, ease: 'Quad.In' });
   }
 
   /** Stand back up after a whiff. */
   getUp(duration = 220) {
     this.scene.tweens.add({ targets: this, angle: 0, shadowDX: 0, duration, ease: 'Quad.Out' });
     this.scene.tweens.add({
-      targets: this.shadow, scaleX: 1, scaleY: 1, alpha: 0.32, duration,
+      targets: this.shadow, scaleX: PLAYER_SCALE, scaleY: PLAYER_SCALE, alpha: 0.32, duration,
       onComplete: () => { if (this.state === 'down') { this.state = 'idle'; this.anims.resume(); } },
     });
   }
