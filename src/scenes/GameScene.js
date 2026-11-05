@@ -15,8 +15,10 @@ import { PlayController } from '../systems/PlayController.js';
 import { DEFAULT_PLAY } from '../plays/playbook.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
+import { nearest } from '../ai/OffenseAI.js';
 
-const ROUTE_COLOR = 0xffe14d; // bright yellow, reads on both grass shades
+const ROUTE_COLOR = 0xf4f4f4; // white routes
+const ROUTE_AIMED = 0x73eff7; // light blue: the receiver you're aiming at
 
 export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
@@ -160,7 +162,8 @@ export class GameScene extends Phaser.Scene {
     if (this.aim && !(ph === 'snap' || ph === 'qb')) this.aim = null;
     // routes stay up from the line-up until the ball is thrown (or the QB runs)
     const wantRoutes = ph === 'presnap' || ph === 'snap' || (ph === 'qb' && this.play.qb.state !== 'throwing');
-    if (!wantRoutes && this.routesVisible) { this.routeGfx.clear(); this.routesVisible = false; }
+    if (wantRoutes) this.drawRoutes(); // redrawn each frame so the aimed receiver can light up
+    else if (this.routesVisible) { this.routeGfx.clear(); this.routesVisible = false; }
     this.drawAim();
     this.camCtl.update(dt);
 
@@ -173,7 +176,7 @@ export class GameScene extends Phaser.Scene {
   /** Before the snap: a little ahead of the line so the routes in front are visible. */
   presnapFocus() {
     const p = this.play;
-    return { x: p.losX + yd(9), y: p.ballY };
+    return { x: p.losX + yd(5), y: p.ballY };
   }
 
   cameraFocus() {
@@ -198,23 +201,71 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- drawing
 
-  /** Every receiver's route: smooth 2px yellow line, 1px dark outline, dot at the end. */
+  /**
+   * Routes + blocking assignments, drawn with real line rendering:
+   * 3px white lines over a dark 1px-wider shadow, rounded joins, an arrowhead
+   * if the route keeps going or a filled circle if the receiver stops. The
+   * receiver you are aiming at gets a light-blue route. Linemen get a short
+   * line to their man ending in a flat "T" bar.
+   */
   drawRoutes() {
     const g = this.routeGfx;
     g.clear();
-    const paths = [];
-    for (const r of this.play.receivers) {
-      if (!r.route?.curve) continue;
-      const pts = r.route.screenPoints(Math.max(8, Math.ceil(r.route.length / 3)));
-      paths.push(pts.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })));
-    }
-    // thin dark shadow under a clean 2px line, small dot at the end
-    for (const pts of paths) {
-      g.lineStyle(2, PAL.ink, 0.45).strokePoints(pts.map((p) => ({ x: p.x, y: p.y + 1 })));
-      g.lineStyle(2, ROUTE_COLOR, 0.9).strokePoints(pts);
+    const play = this.play;
+    const target = this.aimTarget() || this.pendingThrow;
+    const aimed = target ? nearest(target, play.receivers, yd(8)) : null;
+
+    const stroke = (pts, color, width, alpha) => {
+      g.lineStyle(width, color, alpha);
+      g.strokePoints(pts);
+      g.fillStyle(color, alpha);
+      for (const p of pts) g.fillCircle(p.x, p.y, width / 2); // smooth joins
+    };
+    const draw = (pts, color, end) => {
+      const sh = pts.map((p) => ({ x: p.x, y: p.y + 1 }));
+      stroke(sh, PAL.ink, 5, 0.55);
+      stroke(pts, color, 3, 1);
       const e = pts[pts.length - 1];
-      g.fillStyle(PAL.ink, 0.6).fillRect(e.x - 2, e.y - 1, 4, 4);
-      g.fillStyle(ROUTE_COLOR, 1).fillRect(e.x - 2, e.y - 2, 4, 4);
+      const b = pts[pts.length - 2];
+      const len = Math.hypot(e.x - b.x, e.y - b.y) || 1;
+      const ux = (e.x - b.x) / len;
+      const uy = (e.y - b.y) / len;
+      if (end === 'arrow') {
+        const tri = (c, o, s) => {
+          g.fillStyle(c, 1).fillTriangle(
+            e.x + ux * s + o.x, e.y + uy * s + o.y,
+            e.x - ux * s * 0.6 - uy * s + o.x, e.y - uy * s * 0.6 + ux * s + o.y,
+            e.x - ux * s * 0.6 + uy * s + o.x, e.y - uy * s * 0.6 - ux * s + o.y);
+        };
+        tri(PAL.ink, { x: 0, y: 1 }, 6);
+        tri(color, { x: 0, y: 0 }, 5);
+      } else if (end === 'dot') {
+        g.fillStyle(PAL.ink, 1).fillCircle(e.x, e.y + 1, 4.5);
+        g.fillStyle(color, 1).fillCircle(e.x, e.y, 3.5);
+      } else if (end === 'tee') {
+        g.lineStyle(5, PAL.ink, 0.55).lineBetween(e.x - uy * 6, e.y + ux * 6 + 1, e.x + uy * 6, e.y - ux * 6 + 1);
+        g.lineStyle(3, color, 1).lineBetween(e.x - uy * 5, e.y + ux * 5, e.x + uy * 5, e.y - ux * 5);
+      }
+    };
+
+    // blocking assignments: short line toward the man, T bar at the end
+    for (const p of play.offense) {
+      if (p.role !== 'OL') continue;
+      const man = p.blockTarget;
+      const tx = man ? man.x : p.x + yd(2);
+      const ty = man ? man.y : p.y;
+      const dx = tx - p.x;
+      const dy = ty - p.y;
+      const l = Math.hypot(dx, dy) || 1;
+      const reach = Math.min(l * 0.6, yd(1.6));
+      draw([{ x: p.x + 3, y: p.y }, { x: p.x + 3 + (dx / l) * reach, y: p.y + (dy / l) * reach }], PAL.white, 'tee');
+    }
+    // receivers
+    for (const r of play.receivers) {
+      const route = r.route;
+      if (!route?.curve) continue;
+      const pts = route.drawPoints();
+      draw(pts, r === aimed ? ROUTE_AIMED : ROUTE_COLOR, route.settle ? 'dot' : 'arrow');
     }
     this.routesVisible = true;
   }

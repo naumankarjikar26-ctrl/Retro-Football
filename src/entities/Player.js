@@ -54,7 +54,7 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     // (x, y) is the player's feet; lower on screen = closer to the camera = drawn in front
     this.setOrigin(PLAYER_ORIGIN.x, PLAYER_ORIGIN.y);
-    this.shadow = scene.add.image(x, y, 'playershadow').setAlpha(0.3).setDepth(5);
+    this.shadow = scene.add.image(x, y, 'playershadow').setAlpha(0.32).setDepth(5);
     scene.add.existing(this);
     this.playAnim('idle');
   }

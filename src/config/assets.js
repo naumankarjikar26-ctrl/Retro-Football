@@ -28,7 +28,7 @@ export const PLAYER_ANIMS = {
 // (Arms and legs share colours in the template, so both become "pants".)
 export const SHEET_COLOR_MAP = {
   0x3ceaf0: 'helmet',     // head
-  0x379fdb: 'helmetDark', // head shading / face
+  0x379fdb: 'mask',       // face -> dark facemask
   0x6abe30: 'jersey',     // torso light
   0x37946e: 'jerseyDark', // torso dark
   0xac3232: 'pants',      // right limbs light

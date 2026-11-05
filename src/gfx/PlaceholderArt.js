@@ -184,17 +184,20 @@ export function buildPlaceholderMisc(scene) {
   }));
   // Soft pixel shadows (drawn with alpha in-game)
   const ellipseTex = (key, w, h) => add(key, canvasOf(w, h, (ctx) => {
-    ctx.fillStyle = '#000000';
+    // soft oval: solid core, lighter rim (two alpha steps keep it pixel-crisp)
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const nx = (x + 0.5 - w / 2) / (w / 2);
         const ny = (y + 0.5 - h / 2) / (h / 2);
-        if (nx * nx + ny * ny <= 1) ctx.fillRect(x, y, 1, 1);
+        const r = nx * nx + ny * ny;
+        if (r > 1) continue;
+        ctx.fillStyle = r < 0.45 ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.55)';
+        ctx.fillRect(x, y, 1, 1);
       }
     }
   }));
   ellipseTex('ballshadow', 7, 3);
-  ellipseTex('playershadow', 13, 5);
+  ellipseTex('playershadow', 17, 6);
   // 2x2 dot for the dotted throw arc
   add('dot', canvasOf(2, 2, (ctx) => { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 2, 2); }));
 }

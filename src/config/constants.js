@@ -1,8 +1,8 @@
 // Global tuning values. Everything gameplay-related is measured in YARDS and
 // converted to pixels with yd() so the field scale can change in one place.
 
-export const VIEW_W = 320;
-export const VIEW_H = 180;
+export const VIEW_W = 480;
+export const VIEW_H = 270;
 
 // ---------------------------------------------------------------------------
 // View: a HORIZONTAL field seen from a high sideline at a three-quarter angle.
@@ -11,18 +11,18 @@ export const VIEW_H = 180;
 // LAT_SCALE so the WHOLE field width (sideline to sideline) always fits on
 // screen. Players are drawn upright and sorted by Y (lower = in front).
 //
-// Screen layout (internal 320x180):
+// Screen layout (internal 480x270):
 //   [ top bar: score / down & distance ]  BAR_H
 //   [ field camera                     ]  FIELD_VIEW_H
 //   [ bottom bar: control hints        ]  HINT_H
 // ---------------------------------------------------------------------------
-export const BAR_H = 10;
-export const HINT_H = 9;
+export const BAR_H = 15;
+export const HINT_H = 14;
 export const FIELD_VIEW_H = VIEW_H - BAR_H - HINT_H; // 161
 
-export const PX_PER_YARD = 10;              // ~32 yards visible across, like Retro Bowl; a yard is about one player wide
+export const PX_PER_YARD = 19.2;            // 25 yards visible across the 480px view
 export const FIELD_WIDTH_YD = 160 / 3;               // 53.33 yd
-export const FIELD_PX_H = 320;                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
+export const FIELD_PX_H = 614;                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
 export const LAT_SCALE = FIELD_PX_H / (FIELD_WIDTH_YD * PX_PER_YARD); // ~0.41
 export const yd = (yards) => yards * PX_PER_YARD;                // downfield yards -> px (x)
 export const ydLat = (yards) => yards * PX_PER_YARD * LAT_SCALE; // lateral yards -> px (y)
@@ -79,11 +79,11 @@ export const PAL = {
 export const TEAMS = {
   home: {
     name: 'RED', abbr: 'RED', jersey: PAL.red, jerseyDark: PAL.plum, helmet: PAL.orange, helmetDark: PAL.red,
-    pants: PAL.white, pantsDark: PAL.silver, trim: PAL.white, stripe: PAL.red,
+    pants: PAL.white, pantsDark: PAL.silver, trim: PAL.white, stripe: PAL.white, mask: PAL.dusk, socks: PAL.red,
   },
   away: {
     name: 'BLUE', abbr: 'BLU', jersey: PAL.sky, jerseyDark: PAL.blue, helmet: PAL.navy, helmetDark: PAL.ink,
-    pants: PAL.silver, pantsDark: PAL.slate, trim: PAL.white, stripe: PAL.navy,
+    pants: PAL.silver, pantsDark: PAL.slate, trim: PAL.white, stripe: PAL.white, mask: PAL.dusk, socks: PAL.white,
   },
 };
 
@@ -95,8 +95,8 @@ export const TUNING = {
   snapTime: 0.22,          // seconds for the shotgun snap to reach the QB
   qbDropback: 2,           // yards the QB drifts back after the snap
   // Pull-back throwing (screen px at the 320x180 internal resolution)
-  pullCancelPx: 6,         // release with less pull than this = no throw
-  pullMaxPx: 56,           // full power
+  pullCancelPx: 9,         // release with less pull than this = no throw
+  pullMaxPx: 84,           // full power
   minThrowYd: 5,           // throw length at the smallest pull
   maxThrowYd: 60,          // throw length at full pull
   catchRadiusYd: 1.7,

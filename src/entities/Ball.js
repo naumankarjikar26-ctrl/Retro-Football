@@ -2,6 +2,7 @@
 // air it is drawn above its shadow and grows near the top of the arc.
 
 import { HAND_HEIGHT } from '../config/assets.js';
+import { PX_PER_YARD } from '../config/constants.js';
 
 export const THROW_START_Z = HAND_HEIGHT + 4; // released above the shoulder
 export const CATCH_Z = HAND_HEIGHT;
@@ -96,7 +97,7 @@ export class Ball {
     this.sprite.setPosition(Math.round(this.viewX), Math.round(this.viewY));
     // grows near the top of the arc, shrinks coming down
     const lift = Math.max(0, this.z - CATCH_Z);
-    this.sprite.setScale(this.state === 'air' ? 1 + Math.min(0.6, lift / 100) : 1);
+    this.sprite.setScale(this.state === 'air' ? 1 + Math.min(0.6, lift / (PX_PER_YARD * 10)) : 1);
 
     if (this.state === 'air') this.sprite.setDepth(1000);
     else if (this.carrier) {
@@ -106,7 +107,7 @@ export class Ball {
     } else this.sprite.setDepth(10 + this.gy / 1000);
 
     this.shadow.setPosition(Math.round(this.gx), Math.round(this.gy));
-    const h = Math.min(1, lift / 100);
+    const h = Math.min(1, lift / (PX_PER_YARD * 10));
     this.shadow.setScale(1 - h * 0.3).setAlpha(this.state === 'air' ? 0.4 - h * 0.15 : this.carrier ? 0 : 0.3);
   }
 

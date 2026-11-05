@@ -9,6 +9,7 @@ import {
 import { TEAMS } from '../config/constants.js';
 import { buildPlaceholderPlayerSheets, buildPlaceholderMisc, paletteSwap } from '../gfx/PlaceholderArt.js';
 import { registerPixelFont } from '../gfx/PixelFont.js';
+import { stylizeSheet, buildSmallFootball } from '../gfx/SpriteStyle.js';
 
 const canvasFromImage = (img) => {
   const c = document.createElement('canvas');
@@ -32,7 +33,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     registerPixelFont(this);
-    this.buildFootball();
+    buildSmallFootball(this); // smaller than a helmet
     buildPlaceholderMisc(this); // fills in only what is still missing
     this.buildPlayers();
     this.scene.start('Game');
@@ -80,7 +81,9 @@ export class BootScene extends Phaser.Scene {
       }
       for (const team of Object.keys(TEAMS)) {
         const key = `player-${team}-${anim}`;
-        this.textures.addCanvas(key, paletteSwap(source, real ? this.sheetMap(team) : this.keyMap(team)));
+        let sheet = paletteSwap(source, real ? this.sheetMap(team) : this.keyMap(team));
+        if (real) sheet = stylizeSheet(sheet, { w: PLAYER_FRAME.width, h: PLAYER_FRAME.height }, TEAMS[team]);
+        this.textures.addCanvas(key, sheet);
         this.sliceSheet(key);
         this.makeAnims(team, anim, key);
       }

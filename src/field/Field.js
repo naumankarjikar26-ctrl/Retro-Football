@@ -33,6 +33,23 @@ export class Field {
     g.fillStyle(PAL.sky, 1).fillRect(Math.round(yardToX(losYard)) - 1, FIELD_TOP, 2, h);
   }
 
+  /** Deterministic speckle: a few lighter / darker pixels per area. */
+  static addNoise(ctx, x0, y0, w, h) {
+    const img = ctx.getImageData(x0, y0, w, h);
+    const d = img.data;
+    let seed = 1337;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    for (let i = 0; i < d.length; i += 4) {
+      const r = rnd();
+      const k = r < 0.06 ? 10 : r < 0.12 ? -9 : r < 0.14 ? 16 : 0;
+      if (!k) continue;
+      d[i] = Math.max(0, Math.min(255, d[i] + k));
+      d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + k));
+      d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + k));
+    }
+    ctx.putImageData(img, x0, y0);
+  }
+
   static bake() {
     const canvas = document.createElement('canvas');
     canvas.width = WORLD_W;
@@ -54,13 +71,16 @@ export class Field {
       rect((yl / 5) % 2 ? GRASS_DARK : GRASS_LIGHT, X(yl), top, X(yl + 5) - X(yl), h);
     }
 
+    // subtle pixel noise on the grass so the stripes aren't flat
+    Field.addNoise(ctx, X(0), top, X(100) - X(0), h);
+
     // end zones in team colours with the team abbreviation
     const endZone = (x0, team) => {
       const w = X(0) - X(-ENDZONE_YD);
       rect(TEAMS[team].jersey, x0, top, w, h);
       rect(TEAMS[team].jerseyDark, x0, top, w, 2);
       ctx.fillStyle = hex(PAL.white);
-      const s = 3;
+      const s = 10; // big pixel letters
       const word = TEAMS[team].abbr;
       const tw = word.length * 4 * s - s;
       [...word].forEach((ch, i) => drawGlyph(ctx, ch, x0 + Math.round((w - tw) / 2) + i * 4 * s, Math.round(CENTER_Y - 2.5 * s), s));
@@ -88,17 +108,20 @@ export class Field {
       }
     }
 
-    // yard numbers, upright, with the line between the two digits
+    // yard numbers, upright, slightly see-through so they don't overpower players
     ctx.fillStyle = hex(white);
-    const s = 2;
+    ctx.globalAlpha = 0.55;
+    const s = 4;
     for (let yl = 10; yl <= 90; yl += 10) {
       const [a, b] = String(yl <= 50 ? yl : 100 - yl);
       const x = X(yl);
       for (const y of [top + 10, bottom - 10 - 5 * s]) { // near and far sides
-        drawGlyph(ctx, a, x - 2 - 3 * s, y, s);
-        drawGlyph(ctx, b, x + 3, y, s);
+        drawGlyph(ctx, a, x - 3 - 3 * s, y, s);
+        drawGlyph(ctx, b, x + 4, y, s);
       }
     }
+
+    ctx.globalAlpha = 1;
 
     // goal-line pylons
     for (const x of [left, X(0), X(100), right]) {

@@ -5,7 +5,7 @@ A retro pixel-art American football game for the browser, built with
 Retro Bowl but has its own art style, and it's heading toward realistic snap
 counts, hard counts and penalties.
 
-The game renders at 320x180 and scales up with nearest-neighbour filtering, so
+The game renders at 480x270 and scales up with nearest-neighbour filtering, so
 the pixels stay sharp.
 
 ## The view
@@ -17,8 +17,7 @@ Bowl:
   zones at the left and right edges.
 - **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
   and far (top) sides, and the hash marks are in the middle.
-- **Zoomed in like Retro Bowl:** about 32 yards are visible left to right
-  (`PX_PER_YARD = 10`, so a yard is about one player wide). The
+- **About 25 yards are visible left to right** (`PX_PER_YARD = 19.2`). The
   sideline-to-sideline axis is foreshortened (`FIELD_PX_H` in
   `src/config/constants.js`). Speed, throw length and tackle and catch
   distance are all measured in real yards, so the game plays the same at any
@@ -33,11 +32,17 @@ Bowl:
 - **Score, down and distance sit in a bar above the field**, and control hints
   in a bar below it, so neither ever covers the play.
 - **Players are drawn standing up**, using mostly their side and diagonal
-  frames. Players lower on the screen are drawn in front of players higher up.
+  frames. At boot each player gets a 1px dark outline, a helmet stripe and a
+  dark facemask, socks and dark cleats, plus a soft oval shadow. The grass has
+  a subtle pixel-noise texture, and the yard numbers are slightly see-through.
+  The football is a small 7x5 sprite drawn in code. Players lower on the screen are drawn in front of players higher up.
 - **A thrown ball rises up the screen** above its shadow, which slides along
   the grass. The dotted aiming arc curves upward the same way.
-- **Routes are drawn before the snap** as thick yellow curves with a dark
-  outline and a dot at the end. They stay up until the ball is thrown, and
+- **Routes are drawn before the snap** as clean 3px white lines with a dark
+  shadow. Most are straight segments with sharp cuts; flats, wheels and curls
+  are smooth curves. An arrowhead means the receiver keeps running, and a
+  filled circle means he stops. Linemen show a short blocking line ending in
+  a "T". The receiver you're aiming at turns light blue. They stay up until the ball is thrown, and
   the camera frames the QB and the end of every route.
 - **Nobody runs out of bounds on their own.** Routes bend along the sideline
   (and stop inside the end zone), and every player you don't control is kept
@@ -125,6 +130,7 @@ src/
   ai/Blocking.js         blocker/defender engagements
   gfx/PixelFont.js       crisp 3x5 bitmap font
   gfx/PlaceholderArt.js  procedural sprites + palette swap
+  gfx/SpriteStyle.js     outline, helmet stripe/facemask, socks/cleats, small football
 assets/field/            SpawnCampGames "Football Sprites 2D" (field, football)
 assets/players/          Lumenlore "Top Down Prototype Character Template" sheets
 ```

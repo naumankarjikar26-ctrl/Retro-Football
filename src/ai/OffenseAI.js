@@ -41,9 +41,8 @@ function runRoute(p, play, dt) {
   p.driveTo(pt.x, pt.y, dt);
   if (u >= 1) {
     r.done = true;
-    const t = r.curve.getTangentAt(1); // ground-space tangent
-    r.exitX = t.x;
-    r.exitY = t.y;
+    r.exitX = r.endTangent.x; // ground-space tangent
+    r.exitY = r.endTangent.y;
   }
 }
 

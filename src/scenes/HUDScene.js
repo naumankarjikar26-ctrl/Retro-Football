@@ -21,21 +21,21 @@ export class HUDScene extends Phaser.Scene {
     // top score bar
     this.add.rectangle(0, 0, VIEW_W, BAR_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, BAR_H - 1, VIEW_W, 1, PAL.dusk).setOrigin(0);
-    this.downText = new PixelText(this, 3, 2, '', PAL.sand);
-    this.spotText = new PixelText(this, VIEW_W / 2, 2, '', PAL.white).setAlign(0.5);
-    this.scoreText = new PixelText(this, VIEW_W - 3, 2, '', PAL.white).setAlign(1);
+    this.downText = new PixelText(this, 4, 3, '', PAL.sand, 2);
+    this.spotText = new PixelText(this, VIEW_W / 2, 3, '', PAL.white, 2).setAlign(0.5);
+    this.scoreText = new PixelText(this, VIEW_W - 4, 3, '', PAL.white, 2).setAlign(1);
 
     // bottom hint bar
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, HINT_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, 1, PAL.dusk).setOrigin(0);
-    this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 2, '', PAL.silver).setAlign(0.5);
+    this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 3, '', PAL.silver, 2).setAlign(0.5);
     this.onHint('PRESS + PULL BACK: SNAP AND THROW  (SPACE = SNAP)');
 
     // result banner (shown only while the play is dead)
-    this.banner = this.add.container(VIEW_W / 2, BAR_H + 26).setVisible(false);
-    this.bannerBg = this.add.rectangle(0, 0, VIEW_W, 26, PAL.ink, 0.85);
-    this.headline = new PixelText(this, 0, -10, '', PAL.white, 2).setAlign(0.5);
-    this.detail = new PixelText(this, 0, 4, '', PAL.sand).setAlign(0.5);
+    this.banner = this.add.container(VIEW_W / 2, BAR_H + 34).setVisible(false);
+    this.bannerBg = this.add.rectangle(0, 0, VIEW_W, 40, PAL.ink, 0.85);
+    this.headline = new PixelText(this, 0, -15, '', PAL.white, 3).setAlign(0.5);
+    this.detail = new PixelText(this, 0, 7, '', PAL.sand, 2).setAlign(0.5);
     this.banner.add([this.bannerBg, this.headline, this.detail]);
 
     // pull-back indicator
