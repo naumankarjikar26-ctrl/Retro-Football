@@ -51,6 +51,8 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.speedScale = 1;
     this.engaged = null;                      // blocker <-> defender link
     this.ai = {};                             // per-play AI scratch data
+    // pre-snap stance (cleared at the snap)
+    this.stance = { OL: 'stance3', DL: 'stance3', QB: 'stanceQB', RB: 'stance2', WR: 'stance2', TE: 'stance2' }[role] || 'crouch';
 
     // (x, y) is the player's feet; lower on screen = closer to the camera = drawn in front
     this.setOrigin(PLAYER_ORIGIN.x, PLAYER_ORIGIN.y);
@@ -121,6 +123,7 @@ export class Player extends Phaser.GameObjects.Sprite {
 
   refreshAnim() {
     if (this.state === 'down' || this.state === 'throwing') return;
+    if (this.stance) { this.playAnim(this.stance); return; } // pre-snap stance
     const s = this.speedYds;
     // facing uses the on-screen direction, so mostly-sideways running picks
     // the side (E/W) and diagonal frames

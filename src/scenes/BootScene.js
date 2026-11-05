@@ -126,6 +126,13 @@ export class BootScene extends Phaser.Scene {
   makeAnims(team, anim, key) {
     const { cols } = this.textures.get(key).customData;
     const def = PLAYER_ANIMS[anim];
+    if (def.columns) {
+      // one single-frame animation per column (e.g. the stances)
+      DIR_ORDER.forEach((dir, row) => def.columns.forEach((name, c) => {
+        this.anims.create({ key: `${team}-${name}-${dir}`, frames: [{ key, frame: row * cols + Math.min(c, cols - 1) }], frameRate: 1 });
+      }));
+      return;
+    }
     DIR_ORDER.forEach((dir, row) => {
       const frames = [];
       for (let c = 0; c < cols; c++) frames.push({ key, frame: row * cols + c });

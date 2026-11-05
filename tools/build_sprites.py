@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""
+Builds the game's player sheets from the original Lumenlore sheets.
+
+The originals in assets/players/ are NOT modified (they stay as the backup).
+New files are written to assets/players/padded/:
+
+  Idle.png, Walk.png, Run.png, Right-Hand-Punch.png, Death.png
+      the originals with shoulder pads ADDED (only transparent pixels are
+      filled, nothing existing is redrawn)
+  Stance.png
+      new pre-snap stance frames built from the Idle frame of each direction,
+      4 columns x 8 direction rows of 64x64:
+        0 = 3-point stance (OL / DL)   1 = 2-point stance (RB / WR / TE)
+        2 = athletic crouch (LB / DB)  3 = QB ready crouch
+
+All colours stay in the template's key palette, so the in-game palette swap
+(team colours), outline, helmet stripe, facemask, socks and cleats still apply
+exactly as before. The pads use one extra key colour (PAD_HIGHLIGHT), which
+the game maps to each team's lighter jersey shade.
+
+Usage:  python3 tools/build_sprites.py
+"""
+from pathlib import Path
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'assets' / 'players'
+OUT = SRC / 'padded'
+F = 64
+DIRS = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE']  # row order in the sheets
+
+HELMET = {0x3CEAF0, 0x379FDB}
+JERSEY_LIGHT = 0x6ABE30
+JERSEY_DARK = 0x37946E
+JERSEY = {JERSEY_LIGHT, JERSEY_DARK}
+LIMB_LIGHT = {0xAC3232, 0x306082}
+LIMB_DARK = {0x6E2025, 0x304682}
+LIMBS = LIMB_LIGHT | LIMB_DARK
+PAD_HIGHLIGHT = 0xA8E070  # new key colour -> team "jerseyLight"
+
+# facing direction per row: +1 = right, -1 = left, 0 = toward / away from camera
+FORWARD_X = {'E': 1, 'NE': 1, 'SE': 1, 'W': -1, 'NW': -1, 'SW': -1, 'N': 0, 'S': 0}
+
+
+def rgb(px):
+    return (px[0] << 16) | (px[1] << 8) | px[2] if px[3] else None
+
+
+def to_px(c):
+    return ((c >> 16) & 255, (c >> 8) & 255, c & 255, 255)
+
+
+def frame_rows(img, fx, fy, colors):
+    """Rows (absolute y) inside one frame that contain any of `colors`."""
+    ys = []
+    for y in range(fy, fy + F):
+        for x in range(fx, fx + F):
+            if rgb(img.getpixel((x, y))) in colors:
+                ys.append(y)
+                break
+    return ys
+
+
+def add_pads(img):
+    """Shoulder pads: 1-2 px wider on each side, highlight on top. Adds only."""
+    W, H = img.size
+    for fy in range(0, H, F):
+        for fx in range(0, W, F):
+            torso = frame_rows(img, fx, fy, JERSEY)
+            if not torso:
+                continue
+            t0 = torso[0]
+            xs = [x for y in (t0, t0 + 1) for x in range(fx, fx + F) if img.getpixel((x, y))[3]]
+            if not xs:
+                continue
+            left, right = min(xs), max(xs)
+            # row above the shoulders: highlight cap; shoulder row: jersey
+            for y, col, reach in ((t0 - 1, PAD_HIGHLIGHT, 1), (t0, JERSEY_LIGHT, 2), (t0 + 1, JERSEY_DARK, 1)):
+                for x in range(left - reach, right + reach + 1):
+                    if fx <= x < fx + F and fy <= y < fy + F and not img.getpixel((x, y))[3]:
+                        # only next to the body, so the pad hugs the shoulder
+                        if any(img.getpixel((x + dx, y + dy))[3] for dx in (-1, 0, 1) for dy in (0, 1)
+                               if fx <= x + dx < fx + F and fy <= y + dy < fy + F):
+                            img.putpixel((x, y), to_px(col))
+    return img
+
+
+def stance_frame(idle, row, kind):
+    """Builds one 64x64 stance frame from the idle frame of a direction row."""
+    src = idle.crop((0, row * F, F, row * F + F))
+    out = Image.new('RGBA', (F, F), (0, 0, 0, 0))
+    torso = frame_rows(src, 0, 0, JERSEY)
+    opaque = [y for y in range(F) if any(src.getpixel((x, y))[3] for x in range(F))]
+    if not torso or not opaque:
+        return src
+    torso_bottom = torso[-1]
+    feet_top = opaque[-1] - 2          # keep the bottom 3 rows (feet) in place
+    fwd = FORWARD_X[DIRS[row]]
+    # how much to drop the upper body (legs bend) and lean it forward
+    drop, lean, hand_down = {
+        '3pt': (8, 4, True),
+        '2pt': (4, 2, False),
+        'crouch': (5, 0, False),
+        'qb': (3, 1, False),
+    }[kind]
+    top = opaque[0]
+    for y in range(F):
+        for x in range(F):
+            p = src.getpixel((x, y))
+            if not p[3]:
+                continue
+            if y >= feet_top:                  # feet stay planted
+                ny, nx = y, x
+            elif y > torso_bottom:             # thighs: squash by dropping rows
+                span = max(1, feet_top - torso_bottom - 1)
+                keep = max(1, span - drop)
+                t = (y - torso_bottom - 1) / span
+                ny = feet_top - keep + round(t * keep)
+                nx = x + round(fwd * lean * 0.3 * (1 - t))
+            else:                              # head + torso + arms move down / forward
+                ny = y + drop
+                up = (torso_bottom - y) / max(1, torso_bottom - top)
+                nx = x + round(fwd * lean * (0.4 + 0.6 * up))
+            if 0 <= nx < F and 0 <= ny < F:
+                out.putpixel((nx, ny), p)
+    if hand_down:
+        # one arm reaches down to the turf in front of the body
+        xs = [x for y in range(F) for x in range(F) if rgb(out.getpixel((x, y))) in JERSEY]
+        ys = [y for y in range(F) for x in range(F) if rgb(out.getpixel((x, y))) in JERSEY]
+        if xs:
+            if fwd > 0:
+                ax = max(xs) + 1
+            elif fwd < 0:
+                ax = min(xs) - 1
+            else:
+                ax = max(xs) + 1
+            y0 = min(ys) + 2
+            for y in range(y0, opaque[-1] + 1):
+                if 0 <= ax < F and not out.getpixel((ax, y))[3]:
+                    out.putpixel((ax, y), to_px(0xAC3232 if y < opaque[-1] - 1 else 0x6E2025))
+                if 0 <= ax + fwd < F and y >= opaque[-1] - 1 and not out.getpixel((ax + fwd, y))[3]:
+                    out.putpixel((ax + fwd, y), to_px(0x6E2025))
+    return out
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    for name in ['Idle', 'Walk', 'Run', 'Right-Hand-Punch', 'Death']:
+        img = Image.open(SRC / f'{name}.png').convert('RGBA')
+        add_pads(img).save(OUT / f'{name}.png')
+        print('wrote', OUT / f'{name}.png')
+
+    idle = Image.open(SRC / 'Idle.png').convert('RGBA')
+    kinds = ['3pt', '2pt', 'crouch', 'qb']
+    sheet = Image.new('RGBA', (F * len(kinds), F * len(DIRS)), (0, 0, 0, 0))
+    for row in range(len(DIRS)):
+        for col, kind in enumerate(kinds):
+            sheet.paste(stance_frame(idle, row, kind), (col * F, row * F))
+    add_pads(sheet).save(OUT / 'Stance.png')
+    print('wrote', OUT / 'Stance.png')
+
+
+if __name__ == '__main__':
+    main()

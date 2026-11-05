@@ -69,7 +69,7 @@ export class GameScene extends Phaser.Scene {
 
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
-    bus.emit(EV.HINT, 'PRESS + PULL BACK: SNAP AND THROW  (SPACE = SNAP)');
+    bus.emit(EV.HINT, 'PRESS + PULL BACK: SNAP + THROW');
   }
 
   onAction() {

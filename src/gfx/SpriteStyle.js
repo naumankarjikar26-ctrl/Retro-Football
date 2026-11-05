@@ -75,18 +75,18 @@ export function stylizeSheet(canvas, frame, team) {
 }
 
 /**
- * Small football (7x5) - smaller than a helmet - as a 4-frame strip:
+ * Small football (10x7) - smaller than a helmet - as a 4-frame strip:
  * frames 0-1 spiral (laces flicker), frames 2-3 tumble (end over end).
  */
 export function buildSmallFootball(scene) {
   const frames = [
-    ['.xxxxx.', 'xbbwbbx', 'xbwwwbx', 'xbbbbbx', '.xxxxx.'],
-    ['.xxxxx.', 'xbbbbbx', 'xbwwwbx', 'xbbwbbx', '.xxxxx.'],
-    ['.xxxxx.', 'xbbwbbx', 'xbbwbbx', 'xbbbbbx', '.xxxxx.'],
-    ['..xxx..', '.xbbbx.', 'xbbwbbx', '.xbbbx.', '..xxx..'],
+    ['..xxxxxx..', '.xbbbbbbx.', 'xbbwbwbwbx', 'xbbwwwwwbx', 'xbbbbbbbbx', '.xbbbbbbx.', '..xxxxxx..'],
+    ['..xxxxxx..', '.xbbbbbbx.', 'xbbbbbbbbx', 'xbbwwwwwbx', 'xbbwbwbwbx', '.xbbbbbbx.', '..xxxxxx..'],
+    ['..xxxxxx..', '.xbbbbbbx.', 'xbbbwwbbbx', 'xbbbwwbbbx', 'xbbbbbbbbx', '.xbbbbbbx.', '..xxxxxx..'],
+    ['...xxxx...', '..xbbbbx..', '.xbbwwbbx.', 'xbbbwwbbbx', '.xbbbbbbx.', '..xbbbbx..', '...xxxx...'],
   ];
-  const fw = 7;
-  const fh = 5;
+  const fw = 10;
+  const fh = 7;
   const c = document.createElement('canvas');
   c.width = fw * frames.length;
   c.height = fh;

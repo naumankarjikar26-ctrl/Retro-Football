@@ -90,6 +90,9 @@ export class PlayController {
     if (this.phase !== 'presnap') return;
     this.phase = 'snap';
     this.snapTime = this.time;
+    // everyone comes out of their stance; the first frames of the run/block
+    // animations take over from the crouch
+    for (const p of [...this.offense, ...this.defense]) p.stance = null;
     const qb = this.qb;
     this.ball.launch(this.losX, this.ballY, qb.x, qb.y, TUNING.snapTime, 3, () => {
       this.ball.holdBy(qb);
@@ -97,7 +100,7 @@ export class PlayController {
     }, 2, CATCH_Z);
     this.dropbackX = qb.x - yd(TUNING.qbDropback);
     bus.emit(EV.SNAP);
-    bus.emit(EV.HINT, 'PULL BACK + RELEASE TO THROW  -  ARROWS MOVE');
+    bus.emit(EV.HINT, 'PULL BACK + RELEASE TO THROW');
   }
 
   canThrow() {

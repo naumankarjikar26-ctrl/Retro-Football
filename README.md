@@ -5,7 +5,7 @@ A retro pixel-art American football game for the browser, built with
 Retro Bowl but has its own art style, and it's heading toward realistic snap
 counts, hard counts and penalties.
 
-The game renders at 480x270 and scales up with nearest-neighbour filtering, so
+The game renders at 384x216 and scales up with nearest-neighbour filtering, so
 the pixels stay sharp.
 
 ## The view
@@ -17,7 +17,7 @@ Bowl:
   zones at the left and right edges.
 - **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
   and far (top) sides, and the hash marks are in the middle.
-- **About 25 yards are visible left to right** (`PX_PER_YARD = 19.2`). The
+- **About 30 yards are visible left to right** (`PX_PER_YARD = 12.8`). The
   sideline-to-sideline axis is foreshortened (`FIELD_PX_H` in
   `src/config/constants.js`). Speed, throw length and tackle and catch
   distance are all measured in real yards, so the game plays the same at any
@@ -35,7 +35,15 @@ Bowl:
   frames. At boot each player gets a 1px dark outline, a helmet stripe and a
   dark facemask, socks and dark cleats, plus a soft oval shadow. The grass has
   a subtle pixel-noise texture, and the yard numbers are slightly see-through.
-  The football is a small 7x5 sprite drawn in code. Players lower on the screen are drawn in front of players higher up.
+  The football is a 10x7 sprite drawn in code, smaller than a helmet.
+- **Shoulder pads and stances** come from new sheets in `assets/players/padded/`,
+  built by `python3 tools/build_sprites.py`. The script adds pads to the original
+  Lumenlore frames (filling only empty pixels) and creates a `Stance.png` sheet.
+  The originals in `assets/players/` are untouched and kept as the backup.
+  Before the snap, linemen are in a 3-point stance, the QB is in a ready
+  crouch, receivers and backs are in a 2-point stance, and linebackers and
+  DBs are in an athletic crouch. At the snap they break into the normal
+  animations. Players lower on the screen are drawn in front of players higher up.
 - **A thrown ball rises up the screen** above its shadow, which slides along
   the grass. The dotted aiming arc curves upward the same way.
 - **Routes are drawn before the snap** as clean 3px white lines with a dark
@@ -132,7 +140,9 @@ src/
   gfx/PlaceholderArt.js  procedural sprites + palette swap
   gfx/SpriteStyle.js     outline, helmet stripe/facemask, socks/cleats, small football
 assets/field/            SpawnCampGames "Football Sprites 2D" (field, football)
-assets/players/          Lumenlore "Top Down Prototype Character Template" sheets
+assets/players/          Lumenlore sheets (originals, kept as backup)
+assets/players/padded/   game sheets: originals + shoulder pads, plus Stance.png
+tools/build_sprites.py   regenerates assets/players/padded/
 ```
 
 ### Where later stages plug in
