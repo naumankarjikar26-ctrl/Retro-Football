@@ -142,7 +142,9 @@ src/
   gfx/SpriteStyle.js     outline, helmet stripe/facemask, socks/cleats, small football
 assets/field/            SpawnCampGames "Football Sprites 2D" (field, football)
 assets/players/          Lumenlore sheets (originals, kept as backup)
-assets/players/padded/   game sheets: originals + shoulder pads, plus Stance.png
+assets/players/padded/   originals + shoulder pads, plus Stance.png (backup)
+assets/players/v3/       game sheets: padded + separate skin, facemask and trim colours
+src/config/teams.js      uniforms (home / away / alternate), MATCHUP, skin tones
 tools/build_sprites.py   regenerates assets/players/padded/
 ```
 
@@ -158,6 +160,18 @@ tools/build_sprites.py   regenerates assets/players/padded/
   `GameState`.
 - **Stage 6:** a roster provides `ratings` for each `Player` in place of the
   role defaults.
+
+## Uniform colours
+
+Every sprite colour comes from `src/config/teams.js`:
+
+- **Uniforms:** helmet with a secondary-colour stripe, black facemask,
+  jersey and shoulder pads with secondary-colour trim, pants, socks and black
+  cleats.
+- **Skin tones:** arms, hands and the face behind the facemask use one of
+  several realistic tones, picked once per player and kept all game.
+- **Switching uniforms:** change `MATCHUP` to put a team in its alternate
+  uniform.
 
 ## Sprites
 

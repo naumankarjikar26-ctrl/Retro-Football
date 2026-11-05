@@ -158,7 +158,7 @@ def color_parts(img):
     """
     Gives each body part its own key colour, keeping every pixel's shape:
       - arm pixels (limb colours level with the torso) -> skin
-      - face pixels -> skin, with alternate rows as facemask bars
+      - face pixels -> skin; below the eyes, alternate rows become grill bars
       - lowest jersey row -> trim (jersey hem)
     Legs keep the limb colours (-> pants in game).
     """
@@ -170,14 +170,21 @@ def color_parts(img):
                 continue  # hit-flash silhouettes etc.
             t_bottom = max(frame_rows(img, fx, fy, JERSEY))
             face_rows = frame_rows(img, fx, fy, {FACE})
-            f_top = face_rows[0] if face_rows else 0
+            f_bottom = face_rows[-1] if face_rows else 0
+            # the eyes (template black) mark the split: open above, grill below
+            eye_rows = [y for y in range(fy, fy + F)
+                        if any(rgb(img.getpixel((x, y))) == 0x000000 for x in range(fx, fx + F))]
+            eye_y = eye_rows[0] if eye_rows else (face_rows[0] + f_bottom) // 2 if face_rows else 0
             for y in range(fy, fy + F):
                 for x in range(fx, fx + F):
                     c = rgb(img.getpixel((x, y)))
                     if c in LIMBS and y <= t_bottom + 1:
                         img.putpixel((x, y), to_px(SKIN_DARK if c in LIMB_DARK else SKIN_LIGHT))
                     elif c == FACE:
-                        img.putpixel((x, y), to_px(MASK if (y - f_top) % 2 == 1 else SKIN_LIGHT))
+                        # top of the face open (skin); horizontal grill bars on the
+                        # lower half: grill bars (every other pixel) just under the eyes
+                        grill = y > eye_y and (x % 2 == 0 or y == f_bottom + 1)
+                        img.putpixel((x, y), to_px(MASK if grill else SKIN_LIGHT))
                     elif c in JERSEY and y == t_bottom:
                         img.putpixel((x, y), to_px(TRIM))
     return img
