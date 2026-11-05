@@ -90,21 +90,22 @@ export class Field {
 
     // lines: border, goal lines, every 5 yards; ticks every yard
     const white = PAL.white;
-    rect(white, left - 2, top - 2, right - left + 4, 2);       // far sideline
-    rect(white, left - 2, bottom, right - left + 4, 2);        // near sideline
-    rect(white, left - 2, top, 2, h);                          // end lines
-    rect(white, right, top, 2, h);
+    rect(white, left - 3, top - 3, right - left + 6, 3);       // far sideline
+    rect(white, left - 3, bottom, right - left + 6, 3);        // near sideline
+    rect(white, left - 3, top, 3, h);                          // end lines
+    rect(white, right, top, 3, h);
     const hashTop = Math.round(CENTER_Y - ydLat(HASH_OFFSET_YD));
     const hashBot = Math.round(CENTER_Y + ydLat(HASH_OFFSET_YD));
     for (let yl = 0; yl <= 100; yl++) {
       const x = X(yl);
       if (yl % 5 === 0) {
-        rect(white, yl === 0 || yl === 100 ? x - 1 : x, top, yl === 0 || yl === 100 ? 2 : 1, h);
+        // goal lines 3px, every 5 yards 2px
+        rect(white, yl === 0 || yl === 100 ? x - 1 : x - 1, top, yl === 0 || yl === 100 ? 3 : 2, h);
       } else {
-        rect(white, x, top, 1, 2);
-        rect(white, x, bottom - 2, 1, 2);
-        rect(white, x, hashTop - 1, 1, 3);
-        rect(white, x, hashBot - 1, 1, 3);
+        rect(white, x - 1, top, 2, 4);
+        rect(white, x - 1, bottom - 4, 2, 4);
+        rect(white, x - 1, hashTop - 2, 2, 5);
+        rect(white, x - 1, hashBot - 2, 2, 5);
       }
     }
 
