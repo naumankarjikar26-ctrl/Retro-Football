@@ -41,23 +41,12 @@ export class HUDScene extends Phaser.Scene {
     // pull-back indicator
     this.pullGfx = this.add.graphics();
 
-    // current play name (bottom-left of the field) and the audible button (bottom-right)
+    // current play name (bottom-left of the field)
     this.playName = new PixelText(this, 6, VIEW_H - HINT_H - 14, '', PAL.sand, 2);
-    this.audBtn = this.add.container(VIEW_W - 6, VIEW_H - HINT_H - 6);
-    this.audBg = this.add.rectangle(0, 0, 150, 22, PAL.ink, 0.9).setOrigin(1, 1).setStrokeStyle(2, PAL.sand);
-    this.audText = new PixelText(this, -75, -16, '', PAL.sand, 2).setAlign(0.5);
-    this.audBtn.add([this.audBg, this.audText]);
-    this.audBg.setInteractive({ useHandCursor: true });
-    this.audBg.on('pointerup', () => this.gameScene.audible());
 
-    // RANDOM button at the line: swaps in a new random play (press again to re-roll)
-    this.rndBtn = this.add.container(VIEW_W - 162, VIEW_H - HINT_H - 6);
-    this.rndBg = this.add.rectangle(0, 0, 112, 22, PAL.ink, 0.9).setOrigin(1, 1).setStrokeStyle(2, PAL.lime);
-    this.rndBtn.add([this.rndBg, new PixelText(this, -56, -16, 'R: RANDOM', PAL.lime, 2).setAlign(0.5)]);
-    this.rndBg.setInteractive({ useHandCursor: true });
-    this.rndBg.on('pointerup', () => this.gameScene.randomAtLine());
-    this.rndBtn.setVisible(false);
-    this.audBtn.setVisible(false);
+    // CHANGE PLAY panel (bottom-right): swaps in a new random play at the line.
+    // Each signal icon is one change left this half.
+    this.buildChangePlay();
     // random plays: show the play type at the top of the field
     this.randomLabel = new PixelText(this, VIEW_W / 2, BAR_H + 6, '', PAL.sand, 3).setAlign(0.5).setVisible(false);
     bus.on(EV.PLAY_CALLED, (def) => {
@@ -77,17 +66,57 @@ export class HUDScene extends Phaser.Scene {
   update() {
     this.drawPull(this.gameScene.aim, this.gameScene.pullInfo?.());
     const g = this.gameScene;
-    const canAudible = !!g.play && !g.calling && g.play.phase === 'presnap' && !g.audibleUsed && !!g.playDef?.audible;
-    this.audBtn.setVisible(canAudible);
-    if (canAudible) this.audText.setText(g.playDef.type === 'run' ? 'AUDIBLE: PASS' : 'AUDIBLE: RUN');
     this.playName.setVisible(!!g.play && !g.calling);
-    this.rndBtn.setVisible(!!g.play && !g.calling && g.play.phase === 'presnap');
+    const atLine = !!g.play && !g.calling && g.play.phase === 'presnap';
+    this.cpPanel.setVisible(atLine);
+    if (atLine && this.cpShown !== g.gs.changePlaysLeft) this.drawChangePlay(g.gs.changePlaysLeft);
+  }
+
+  buildChangePlay() {
+    const W = 196;
+    const H = 58;
+    this.cpW = W;
+    this.cpH = H;
+    this.cpPanel = this.add.container(VIEW_W - W - 8, VIEW_H - HINT_H - H - 6).setVisible(false);
+    this.cpGfx = this.add.graphics();
+    this.cpTitle = new PixelText(this, W / 2, 8, 'CHANGE PLAY', PAL.white, 3).setAlign(0.5);
+    this.cpHit = this.add.rectangle(0, 0, W, H, 0x000000, 0.001).setOrigin(0);
+    this.cpPanel.add([this.cpGfx, this.cpTitle, this.cpHit]);
+    this.cpHit.setInteractive({ useHandCursor: true });
+    this.cpHit.on('pointerup', () => this.gameScene.changePlay());
+  }
+
+  /** Dark rounded panel, big title, one "signal" icon per change left (used ones dimmed). */
+  drawChangePlay(left) {
+    this.cpShown = left;
+    const g = this.cpGfx;
+    const { cpW: W, cpH: H } = this;
+    const total = TUNING.changePlaysPerHalf;
+    g.clear();
+    g.fillStyle(PAL.ink, 0.9).fillRoundedRect(0, 0, W, H, 6);
+    g.lineStyle(2, left > 0 ? PAL.white : PAL.slate, 1).strokeRoundedRect(1, 1, W - 2, H - 2, 6);
+    this.cpTitle.setColor(left > 0 ? PAL.white : PAL.slate);
+    const gap = 22;
+    const x0 = W / 2 - ((total - 1) * gap) / 2;
+    for (let i = 0; i < total; i++) {
+      const on = i < left;
+      const cx = Math.round(x0 + i * gap) - 4;
+      const cy = 41;
+      const col = on ? PAL.white : PAL.dusk;
+      // dot + two widening arcs, like a little "signal" glyph
+      g.fillStyle(col, 1).fillRect(cx, cy - 1, 2, 2);
+      g.lineStyle(2, col, 1);
+      for (const r of [5, 9]) {
+        g.beginPath();
+        g.arc(cx - 2, cy, r, -Math.PI / 3.2, Math.PI / 3.2);
+        g.strokePath();
+      }
+    }
   }
 
   /** True if a screen point is over a HUD button (so it doesn't snap the ball). */
   overButton(p) {
-    return (this.audBtn.visible && this.audBg.getBounds().contains(p.x, p.y))
-      || (this.rndBtn.visible && this.rndBg.getBounds().contains(p.x, p.y));
+    return this.cpPanel.visible && this.cpHit.getBounds().contains(p.x, p.y);
   }
 
   /** Circle at the press point and a line to the current pointer. */

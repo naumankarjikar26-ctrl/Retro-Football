@@ -78,7 +78,7 @@ Then open <http://localhost:8080>.
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
 | Call a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, `Q` = Quick Pick | Tap a tab, then a card |
-| Audible (once per play, at the line) | `A` or the AUDIBLE button | Tap AUDIBLE |
+| Change play (at the line, 8 per half) | `C` or the CHANGE PLAY panel | Tap CHANGE PLAY |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
@@ -143,8 +143,6 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 - **Formations:** shotgun spread, shotgun trips, I-form, singleback, punt
   and field goal.
 - **Under center:** in the I-form and singleback, the QB takes a 5-step drop.
-- **Audible:** at the line you get one per play. Passes switch to a run, and
-  runs switch to a quick pass.
 - **Runs:** the QB hands off or pitches automatically, receivers block, and
   you control the runner after the handoff.
 - **Play action:** the QB fakes the handoff, and the linebackers bite on the
@@ -156,10 +154,12 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 - **No possession change yet:** punts and field goals both lead to a new
   drive at your own 25.
 
-**Random plays** build a brand-new play every time. They're only available on
-the field: before the snap, the **R: RANDOM** button (or `R`) swaps in a new
-random play right at the line. Press it again to re-roll until you snap. This
-doesn't use up your audible.
+**CHANGE PLAY** sits in the bottom-right corner at the line. Pressing it (or
+`C`) swaps in a brand-new random play before the snap. You get 8 per half:
+each signal icon on the panel is one change left, and used ones dim. The
+count is `changePlaysPerHalf` in `src/config/constants.js`. Until a game clock
+exists there's no halftime, so for now the 8 last the whole game.
+`GameState.startHalf()` refills them.
 
 How the generator builds a play:
 

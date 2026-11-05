@@ -42,8 +42,7 @@ export class GameScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER');
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
-    this.input.keyboard.on('keydown-A', () => this.audible());
-    this.input.keyboard.on('keydown-R', () => this.randomAtLine());
+    this.input.keyboard.on('keydown-C', () => this.changePlay());
     // ball carrier cuts: one press = one cut (no holding)
     for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(-1));
     for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(1));
@@ -116,26 +115,22 @@ export class GameScene extends Phaser.Scene {
     bus.emit(EV.PRESNAP, this.gs);
     bus.emit(EV.PLAY_CALLED, def);
     const hints = {
-      run: 'PRESS / SPACE TO SNAP  -  A: AUDIBLE',
+      run: 'PRESS / SPACE TO SNAP  -  C: CHANGE PLAY',
       punt: 'PRESS / SPACE TO SNAP AND PUNT',
       fg: 'PRESS / SPACE TO SNAP AND KICK',
     };
-    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  A: AUDIBLE');
+    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  C: CHANGE PLAY');
   }
 
-  /** At the line: swap in a fresh random play (any number of times before the snap). */
-  randomAtLine() {
+  /**
+   * CHANGE PLAY at the line: swaps in a brand-new random play. Limited to
+   * TUNING.changePlaysPerHalf per half (tracked in GameState).
+   */
+  changePlay() {
     if (this.calling || !this.play || this.play.phase !== 'presnap') return;
-    this.startPlay(randomPlay(), { audibled: this.audibleUsed });
-  }
-
-  /** One audible per play, at the line: pass -> run, run -> quick pass. */
-  audible() {
-    if (this.calling || !this.play || this.play.phase !== 'presnap' || this.audibleUsed) return;
-    const next = playById(this.playDef.audible);
-    if (!next) return;
-    bus.emit(EV.AUDIBLE, next);
-    this.startPlay(next, { audibled: true });
+    if (this.gs.changePlaysLeft <= 0) return;
+    this.gs.changePlaysLeft -= 1;
+    this.startPlay(randomPlay());
   }
 
   onAction() {
@@ -158,7 +153,7 @@ export class GameScene extends Phaser.Scene {
 
   onPointerDown(p) {
     if (this.calling || !this.play) return;
-    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the audible button
+    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the CHANGE PLAY panel
     const ph = this.play?.phase;
     if (ph === 'dead') { this.onAction(); return; }
     // click / tap the running back: he gets the ball and runs it

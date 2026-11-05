@@ -1,7 +1,7 @@
 // Down, distance, ball spot and score. Pure logic, no Phaser objects, so the
 // penalty system (Stage 5) can apply yardage/down changes through it too.
 
-import { HASH_OFFSET_YD } from '../config/constants.js';
+import { HASH_OFFSET_YD, TUNING } from '../config/constants.js';
 import { SKIN_TONES } from '../config/teams.js';
 
 export class GameState {
@@ -9,7 +9,13 @@ export class GameState {
     this.score = { home: 0, away: 0 };
     this.quarter = 1;
     this.newDrive(25);
+    this.startHalf();
     // Stage 5: playClock, challengesLeft, half. Stage 4: hardCountHistory.
+  }
+
+  /** New half: refill the CHANGE PLAY uses. (Call at halftime once a game clock exists.) */
+  startHalf() {
+    this.changePlaysLeft = TUNING.changePlaysPerHalf;
   }
 
   /** Each player's skin tone is picked once and kept for the whole game (Stage 6: from the roster). */
