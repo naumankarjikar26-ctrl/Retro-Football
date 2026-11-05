@@ -80,7 +80,6 @@ export const CATEGORIES = [
   { id: 'long', name: 'LONG' },
   { id: 'pa', name: 'PLAY ACTION' },
   { id: 'special', name: 'KICK' },
-  { id: 'random', name: 'RANDOM' },   // generated plays (plays/randomPlay.js)
 ];
 
 export const playById = (id) => PLAYBOOK.find((p) => p.id === id);

@@ -8,9 +8,8 @@ import { PixelText } from '../gfx/PixelFont.js';
 import { PLAYBOOK, CATEGORIES } from '../plays/playbook.js';
 import { OFFENSE_FORMATIONS } from '../plays/formations.js';
 import { ROUTES } from '../plays/routes.js';
-import { randomPlay } from '../plays/randomPlay.js';
 
-const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand, random: PAL.lime };
+const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand };
 const COLS = 4;
 const CARD_W = 148;
 const CARD_H = 112;
@@ -29,77 +28,29 @@ export class PlayCallScene extends Phaser.Scene {
 
     // tab bar + quick pick
     this.tabs = CATEGORIES.map((c, i) => {
-      const x = 8 + i * 86;
-      const bg = this.add.rectangle(x, top + 6, 82, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
-      const label = new PixelText(this, x + 41, top + 12, c.name === 'PLAY ACTION' ? 'PLAY ACT' : c.name, PAL.white, 2).setAlign(0.5);
+      const x = 12 + i * 100;
+      const bg = this.add.rectangle(x, top + 6, 96, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
+      const label = new PixelText(this, x + 48, top + 12, c.name, PAL.white, 2).setAlign(0.5);
       bg.setInteractive({ useHandCursor: true }).on('pointerup', () => this.showTab(i));
       return { bg, label, cat: c.id };
     });
-    const qx = VIEW_W - 8 - 104;
+    const qx = VIEW_W - 12 - 104;
     const qb = this.add.rectangle(qx, top + 6, 104, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.sand);
     new PixelText(this, qx + 52, top + 12, 'Q QUICK PICK', PAL.sand, 2).setAlign(0.5);
     qb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.quickPick());
 
     this.cardLayer = this.add.container(0, 0);
     this.showTab(this.tab);
-
-    // RANDOM PLAY: generates a brand-new play; press again to re-roll
-    const rx = VIEW_W / 2 - 90;
-    const ry = VIEW_H - HINT_H - 30;
-    const rb = this.add.rectangle(rx, ry, 180, 24, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.lime);
-    this.randomLabel = new PixelText(this, rx + 90, ry + 7, 'R  RANDOM PLAY', PAL.lime, 2).setAlign(0.5);
-    rb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.rollRandom());
-
     this.input.keyboard.on('keydown', (e) => {
       if (e.key === 'ArrowLeft') this.showTab((this.tab + CATEGORIES.length - 1) % CATEGORIES.length);
       if (e.key === 'ArrowRight') this.showTab((this.tab + 1) % CATEGORIES.length);
       const n = Number(e.key);
-      if (!this.randomDef && n >= 1 && n <= this.plays.length) this.pick(this.plays[n - 1]);
+      if (n >= 1 && n <= this.plays.length) this.pick(this.plays[n - 1]);
       if (e.key === 'q' || e.key === 'Q') this.quickPick();
-      if (e.key === 'r' || e.key === 'R') this.rollRandom();
-      if (e.key === 'Enter' && this.randomDef) this.pick(this.randomDef);
-    });
-  }
-
-  /** Generate (or re-roll) a random play and show it big, with CALL IT / RE-ROLL / BACK. */
-  rollRandom() {
-    this.randomDef = randomPlay();
-    const def = this.randomDef;
-    this.cardLayer.removeAll(true);
-    const w = 420;
-    const h = 236;
-    const x = Math.round((VIEW_W - w) / 2);
-    const y = BAR_H + 34;
-    const items = [];
-    items.push(this.add.rectangle(x, y, w, h, 0x24304a).setOrigin(0).setStrokeStyle(2, PAL.lime));
-    items.push(new PixelText(this, x + w / 2, y + 8, def.name, PAL.lime, 3).setAlign(0.5));
-    items.push(new PixelText(this, x + w / 2, y + 30, `${OFFENSE_FORMATIONS[def.formation].name}${def.detail ? '  -  ' + def.detail : ''}`, PAL.white, 2).setAlign(0.5));
-    items.push(this.drawDiagram(def, x + 10, y + 46, w - 20, h - 92));
-    const btn = (bx, label, color, fn) => {
-      const b = this.add.rectangle(bx, y + h - 36, 124, 26, PAL.dusk).setOrigin(0).setStrokeStyle(2, color);
-      b.setInteractive({ useHandCursor: true }).on('pointerup', fn);
-      items.push(b, new PixelText(this, bx + 62, y + h - 28, label, color, 2).setAlign(0.5));
-    };
-    btn(x + 10, 'ENTER: CALL IT', PAL.lime, () => this.pick(def));
-    btn(x + w / 2 - 62, 'R: RE-ROLL', PAL.sand, () => this.rollRandom());
-    btn(x + w - 134, 'BACK', PAL.silver, () => { this.randomDef = null; this.showTab(0); });
-    this.cardLayer.add(items);
-    this.tabs.forEach((t) => {
-      const on = t.cat === 'random';
-      t.bg.setFillStyle(on ? PAL.ink : PAL.dusk).setStrokeStyle(2, on ? CAT_COLOR.random : PAL.slate);
-      t.label.setColor(on ? CAT_COLOR.random : PAL.white);
     });
   }
 
   showTab(i) {
-    // the RANDOM tab goes straight to the generator
-    if (CATEGORIES[i].id === 'random') {
-      this.tab = i;
-      PlayCallScene.lastTab = i;
-      this.rollRandom();
-      return;
-    }
-    this.randomDef = null;
     this.tab = i;
     PlayCallScene.lastTab = i;
     this.tabs.forEach((t, k) => {
