@@ -225,6 +225,9 @@ export class PlayController {
     c.angle = 0;
     tw.add({ targets: c, y: ty, duration: TUNING.jukeTime * 1000, ease: 'Quad.Out' });
     tw.add({ targets: c, angle: dir * 14, duration: TUNING.jukeTime * 500, yoyo: true, ease: 'Sine.Out', onComplete: () => { c.angle = 0; } });
+    // a juke costs a little speed for a moment
+    c.speedScale = TUNING.jukeSlowdown;
+    this.scene.time.delayedCall(TUNING.jukeSlowTime * 1000, () => { if (c.active) c.speedScale = 1; });
     bus.emit(EV.JUKE, { carrier: c, dir });
   }
 

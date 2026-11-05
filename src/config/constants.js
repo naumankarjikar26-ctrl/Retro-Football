@@ -97,6 +97,8 @@ export const TUNING = {
   jukeEvadeWindow: 0.25,   // extra seconds after it when tacklers tend to whiff
   jukeEvadeChance: 0.8,    // chance a tackle attempt in that window misses
   jukeCooldown: 0.3,       // seconds before the next juke
+  jukeSlowdown: 0.75,      // speed while recovering from a juke (fraction of top speed)
+  jukeSlowTime: 0.4,       // seconds that slowdown lasts
   // Chance a ball carrier escapes a tackle attempt (3 in 8). Later: from ratings.
   brokenTackleChance: 3 / 8,
   tackleRetryDelay: 1.0,     // seconds before a whiffed defender may try again
