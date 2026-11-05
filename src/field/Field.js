@@ -94,7 +94,7 @@ export class Field {
     for (let yl = 10; yl <= 90; yl += 10) {
       const [a, b] = String(yl <= 50 ? yl : 100 - yl);
       const x = X(yl);
-      for (const y of [bottom - 8 - 5 * s]) { // near side only: less clutter
+      for (const y of [top + 10, bottom - 10 - 5 * s]) { // near and far sides
         drawGlyph(ctx, a, x - 2 - 3 * s, y, s);
         drawGlyph(ctx, b, x + 3, y, s);
       }

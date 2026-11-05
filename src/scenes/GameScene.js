@@ -62,7 +62,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.camCtl) this.camCtl = new CameraController(this, this.play.ball);
     this.camCtl.ball = this.play.ball;
     this.camCtl.setFocus(() => this.cameraFocus());
-    if (first) this.camCtl.snapTo(this.routeFramingX());
+    this.camCtl.setGuard(() => this.cameraGuard());
+    if (first) { const f = this.presnapFocus(); this.camCtl.snapTo(f.x, f.y); }
 
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
@@ -169,18 +170,10 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Camera X that frames the QB and the END of every route. */
-  routeFramingX() {
-    const play = this.play;
-    const viewW = this.cameras.main.width;
-    const minX = play.qb.x - yd(3);
-    let maxX = minX;
-    for (const r of play.receivers) {
-      if (!r.route?.curve) continue;
-      maxX = Math.max(maxX, r.route.screenAt(1).x + yd(2));
-    }
-    if (maxX - minX > viewW) return minX + viewW / 2; // never lose the QB
-    return (minX + maxX) / 2;
+  /** Before the snap: a little ahead of the line so the routes in front are visible. */
+  presnapFocus() {
+    const p = this.play;
+    return { x: p.losX + yd(9), y: p.ballY };
   }
 
   cameraFocus() {
@@ -188,14 +181,19 @@ export class GameScene extends Phaser.Scene {
     const ball = play.ball;
     const ph = play.phase;
     const target = this.aim && this.aimTarget();
-    if (target) {
-      // lean toward the landing spot; the ball guard keeps the QB on screen
-      return { x: Phaser.Math.Linear(ball.viewX, target.x, 0.5) };
-    }
-    if (ph === 'presnap' || ph === 'snap' || ph === 'qb') return { x: this.routeFramingX() };
-    // ball in the air: lean toward where it will land so the target stays in view
-    if (ph === 'air' && play.throwTarget) return { x: Phaser.Math.Linear(ball.viewX, play.throwTarget.x, 0.45) };
-    return { x: ball.viewX };
+    const mid = (t, k) => ({ x: Phaser.Math.Linear(ball.viewX, t.x, k), y: Phaser.Math.Linear(ball.viewY, t.y, k) });
+    if (target) return mid(target, 0.5);                       // aiming: between QB and landing spot
+    if (ph === 'presnap' || ph === 'snap') return this.presnapFocus();
+    if (ph === 'qb') return { x: Math.max(ball.viewX + yd(8), play.losX + yd(4)), y: ball.viewY };
+    if (ph === 'air' && play.throwTarget) return mid(play.throwTarget, 0.5); // ball + landing spot
+    return { x: ball.viewX + yd(3), y: ball.viewY };
+  }
+
+  /** While aiming, the landing spot (where your receiver is) must stay on screen. */
+  cameraGuard() {
+    const target = this.aim && this.aimTarget();
+    if (target) return target;
+    return null;
   }
 
   // ---------------------------------------------------------------- drawing

@@ -9,7 +9,7 @@
 // penalties listen to the bus events this class emits.
 
 import {
-  TUNING, FIELD_TOP, FIELD_BOTTOM, WORLD_W, WORLD_H, SIDELINE_MARGIN_YD, yd, ydLat, toYards, yardToX, xToYard,
+  TUNING, PX_PER_YARD, FIELD_TOP, FIELD_BOTTOM, WORLD_W, WORLD_H, SIDELINE_MARGIN_YD, yd, ydLat, toYards, yardToX, xToYard,
   latToY, yToLat,
   gdist, groundLen,
 } from '../config/constants.js';
@@ -113,7 +113,7 @@ export class PlayController {
   throwParams(tx, ty) {
     const q = this.qb;
     const dist = toYards(gdist(q, { x: tx, y: ty }));
-    return { dist, duration: 0.35 + dist * 0.034, peak: 2 + dist * 0.7 };
+    return { dist, duration: 0.35 + dist * 0.034, peak: (2 + dist * 0.7) * (PX_PER_YARD / 5) };
   }
 
   throwTo(tx, ty) {

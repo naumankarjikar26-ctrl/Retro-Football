@@ -96,7 +96,7 @@ export class Ball {
     this.sprite.setPosition(Math.round(this.viewX), Math.round(this.viewY));
     // grows near the top of the arc, shrinks coming down
     const lift = Math.max(0, this.z - CATCH_Z);
-    this.sprite.setScale(this.state === 'air' ? 1 + Math.min(0.6, lift / 50) : 1);
+    this.sprite.setScale(this.state === 'air' ? 1 + Math.min(0.6, lift / 100) : 1);
 
     if (this.state === 'air') this.sprite.setDepth(1000);
     else if (this.carrier) {
@@ -106,7 +106,7 @@ export class Ball {
     } else this.sprite.setDepth(10 + this.gy / 1000);
 
     this.shadow.setPosition(Math.round(this.gx), Math.round(this.gy));
-    const h = Math.min(1, lift / 50);
+    const h = Math.min(1, lift / 100);
     this.shadow.setScale(1 - h * 0.3).setAlpha(this.state === 'air' ? 0.4 - h * 0.15 : this.carrier ? 0 : 0.3);
   }
 

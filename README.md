@@ -17,11 +17,16 @@ Bowl:
   zones at the left and right edges.
 - **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
   and far (top) sides, and the hash marks are in the middle.
-- **The whole field width is always on screen**, sideline to sideline, so you
-  can see and throw to every receiver. The sideline-to-sideline axis is
-  foreshortened to make this fit (`FIELD_PX_H` in `src/config/constants.js`).
-  The game still measures speed, throw length and tackle and catch distance
-  on the real ground, so this is only a visual effect.
+- **Zoomed in like Retro Bowl:** about 32 yards are visible left to right
+  (`PX_PER_YARD = 10`, so a yard is about one player wide). The
+  sideline-to-sideline axis is foreshortened (`FIELD_PX_H` in
+  `src/config/constants.js`). Speed, throw length and tackle and catch
+  distance are all measured in real yards, so the game plays the same at any
+  scale.
+- **The camera follows the ball both ways.** Before the snap it sits a little
+  ahead of the line of scrimmage. While you aim, it frames the QB and the
+  landing spot, and the landing spot (your receiver) is never off screen. In
+  flight it follows the ball toward the landing spot.
 - **The field is drawn in code**, so the 5-yard stripes, yard lines, upright
   yard numbers, hash marks, white sidelines, the darker bench area and the
   team-coloured end zones (with team abbreviations) all line up exactly.

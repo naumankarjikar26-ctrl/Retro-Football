@@ -20,9 +20,9 @@ export const BAR_H = 10;
 export const HINT_H = 9;
 export const FIELD_VIEW_H = VIEW_H - BAR_H - HINT_H; // 161
 
-export const PX_PER_YARD = 5;               // 64 yards visible across: QB + a 60-yard throw fit on screen
+export const PX_PER_YARD = 10;              // ~32 yards visible across, like Retro Bowl; a yard is about one player wide
 export const FIELD_WIDTH_YD = 160 / 3;               // 53.33 yd
-export const FIELD_PX_H = 130;                       // on-screen sideline-to-sideline height
+export const FIELD_PX_H = 320;                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
 export const LAT_SCALE = FIELD_PX_H / (FIELD_WIDTH_YD * PX_PER_YARD); // ~0.41
 export const yd = (yards) => yards * PX_PER_YARD;                // downfield yards -> px (x)
 export const ydLat = (yards) => yards * PX_PER_YARD * LAT_SCALE; // lateral yards -> px (y)
@@ -34,11 +34,8 @@ export const OWN_GOAL_X = END_PAD + yd(ENDZONE_YD);   // left goal line (yard 0)
 export const WORLD_W = END_PAD * 2 + yd(100 + ENDZONE_YD * 2);
 export const FIELD_TOP = 40;                   // far sideline (room above for players' bodies + high throws)
 export const FIELD_BOTTOM = FIELD_TOP + FIELD_PX_H; // near sideline
-export const WORLD_H = FIELD_BOTTOM + 14;
+export const WORLD_H = FIELD_BOTTOM + 20;
 export const CENTER_Y = (FIELD_TOP + FIELD_BOTTOM) / 2;
-// Camera's resting vertical scroll: shows the far sideline plus the players
-// standing on it, down to the near sideline.
-export const CAM_REST_Y = FIELD_TOP - 26;
 export const HASH_OFFSET_YD = 6;               // ball is spotted between the hash marks
 export const SIDELINE_MARGIN_YD = 2;           // AI players and routes stay this far inside
 
