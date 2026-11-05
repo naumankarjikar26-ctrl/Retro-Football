@@ -4,28 +4,28 @@
 export const VIEW_W = 320;
 export const VIEW_H = 180;
 
-export const PX_PER_YARD = 6;
+// Field geometry is calibrated to the SpawnCampGames field image
+// (assets/field/FootballFieldNoBranding.png, 1001x505), which is rotated 90
+// degrees at boot so the field runs vertically. In that image 5 yards = 38.4 px.
+export const PX_PER_YARD = 7.68;
 export const yd = (yards) => yards * PX_PER_YARD;
 export const toYards = (px) => px / PX_PER_YARD;
 
-// Field geometry
 export const FIELD_WIDTH_YD = 160 / 3; // 53.33 yd
 export const ENDZONE_YD = 10;
-export const SIDELINE_PAD = 24;         // px of sideline area left/right of the field
-export const ENDLINE_PAD = 24;          // px beyond each end line
-export const FIELD_W = Math.round(yd(FIELD_WIDTH_YD)); // 320
-export const FIELD_H = yd(100 + ENDZONE_YD * 2);        // 720
-export const WORLD_W = FIELD_W + SIDELINE_PAD * 2;
-export const WORLD_H = FIELD_H + ENDLINE_PAD * 2;
-export const FIELD_LEFT = SIDELINE_PAD;
-export const FIELD_RIGHT = SIDELINE_PAD + FIELD_W;
-export const CENTER_X = WORLD_W / 2;
-export const HASH_OFFSET_YD = 3.08;     // NFL hashes are 18'6" apart
+export const WORLD_W = 505;            // rotated image width
+export const WORLD_H = 1001;           // rotated image height
+export const FIELD_LEFT = 49;          // inner edge of the left sideline
+export const FIELD_RIGHT = 458;        // inner edge of the right sideline
+export const FIELD_W = FIELD_RIGHT - FIELD_LEFT;
+export const CENTER_X = (FIELD_LEFT + FIELD_RIGHT) / 2;
+export const OWN_GOAL_Y = 883.5;       // centre of the bottom goal line (yard 0)
+export const HASH_OFFSET_YD = 7;       // ball is spotted between the image's hash marks
 
 // Yard line (0 = own goal line, 100 = opponent goal line) -> world Y.
 // Offense always moves UP the screen.
-export const yardToY = (yardLine) => ENDLINE_PAD + yd(ENDZONE_YD + 100 - yardLine);
-export const yToYard = (y) => ENDZONE_YD + 100 - toYards(y - ENDLINE_PAD);
+export const yardToY = (yardLine) => OWN_GOAL_Y - yd(yardLine);
+export const yToYard = (y) => (OWN_GOAL_Y - y) / PX_PER_YARD;
 // Lateral yards from the middle of the field -> world X.
 export const latToX = (lat) => CENTER_X + yd(lat);
 export const xToLat = (x) => toYards(x - CENTER_X);
@@ -53,9 +53,17 @@ export const PAL = {
   ball: 0x7a3b1e,
 };
 
+// Each team's uniform: a light and dark shade for jersey, helmet and pants.
+// (trim/stripe are only used by the procedural fallback sprites.)
 export const TEAMS = {
-  home: { name: 'HOME', jersey: PAL.red, trim: PAL.white, helmet: PAL.red, stripe: PAL.sand, pants: PAL.white },
-  away: { name: 'AWAY', jersey: PAL.blue, trim: PAL.white, helmet: PAL.navy, stripe: PAL.white, pants: PAL.silver },
+  home: {
+    name: 'HOME', jersey: PAL.red, jerseyDark: PAL.plum, helmet: PAL.orange, helmetDark: PAL.red,
+    pants: PAL.white, pantsDark: PAL.silver, trim: PAL.white, stripe: PAL.red,
+  },
+  away: {
+    name: 'AWAY', jersey: PAL.sky, jerseyDark: PAL.blue, helmet: PAL.navy, helmetDark: PAL.ink,
+    pants: PAL.silver, pantsDark: PAL.slate, trim: PAL.white, stripe: PAL.navy,
+  },
 };
 
 // Movement / feel. Speeds are yards per second.

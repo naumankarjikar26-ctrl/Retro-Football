@@ -11,7 +11,7 @@ import {
 import { OFFENSE_FORMATIONS, DEFENSE_FORMATIONS } from '../plays/formations.js';
 import { buildRoute } from '../plays/routes.js';
 import { Player } from '../entities/Player.js';
-import { Ball } from '../entities/Ball.js';
+import { Ball, CATCH_Z } from '../entities/Ball.js';
 import { updateOffense, nearest } from '../ai/OffenseAI.js';
 import { updateDefense } from '../ai/DefenseAI.js';
 import { bus, EV } from './events.js';
@@ -85,10 +85,10 @@ export class PlayController {
     this.phase = 'snap';
     this.snapTime = this.time;
     const qb = this.qb;
-    this.ball.launch(this.ballX, this.losY, qb.x, qb.y - 2, TUNING.snapTime, 3, () => {
+    this.ball.launch(this.ballX, this.losY, qb.x, qb.y, TUNING.snapTime, 3, () => {
       this.ball.holdBy(qb);
       if (this.phase === 'snap') this.phase = 'qb';
-    }, 1, 3);
+    }, 2, CATCH_Z);
     this.dropbackY = qb.y + yd(TUNING.qbDropback);
     bus.emit(EV.SNAP);
     bus.emit(EV.HINT, 'DRAG TO THROW  -  ARROWS/WASD TO MOVE');
@@ -122,7 +122,8 @@ export class PlayController {
       // the receiver closest to the landing spot goes up for it
       this.intended = nearest({ x: tx, y: ty }, this.receivers.filter((r) => r.state !== 'down'), yd(14));
       this.controlled = null;
-      this.ball.launch(q.x, q.y - 2, tx, ty, duration, peak, () => this.resolveCatch());
+      this.throwFrom = { x: q.x, y: q.y };
+      this.ball.launch(q.x, q.y, tx, ty, duration, peak, () => this.resolveCatch());
       bus.emit(EV.THROW, { from: { x: q.x, y: q.y }, to: { x: tx, y: ty }, beyondLOS: q.y < this.losY });
     });
     return true;
@@ -216,7 +217,16 @@ export class PlayController {
   }
 
   incomplete(reason) {
-    this.ball.placeAt(this.ball.gx, this.ball.gy);
+    // the ball skips along the turf, tumbling end over end
+    const b = this.ball;
+    const from = this.throwFrom || { x: b.gx, y: b.gy + 1 };
+    const dx = b.gx - from.x;
+    const dy = b.gy - from.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const hop = yd(2);
+    const sx = b.gx;
+    const sy = b.gy;
+    b.launch(sx, sy, sx + (dx / len) * hop, sy + (dy / len) * hop, 0.45, 5, () => b.placeAt(b.gx, b.gy), CATCH_Z, 0, 'ball-tumble');
     bus.emit(EV.INCOMPLETE, { reason });
     this.end({ type: 'incomplete', reason });
     return false;

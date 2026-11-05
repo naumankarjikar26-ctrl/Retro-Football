@@ -8,6 +8,7 @@ import { GameState } from '../systems/GameState.js';
 import { PlayController } from '../systems/PlayController.js';
 import { DEFAULT_PLAY } from '../plays/playbook.js';
 import { bus, EV } from '../systems/events.js';
+import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
@@ -114,7 +115,7 @@ export class GameScene extends Phaser.Scene {
     if (toYards(len) < TUNING.minThrowYd) return null;
     const max = yd(TUNING.maxThrowYd);
     if (len > max) { dx *= max / len; dy *= max / len; }
-    return { x: q.x + dx, y: q.y - 2 + dy };
+    return { x: q.x + dx, y: q.y + dy };
   }
 
   readInput() {
@@ -184,7 +185,7 @@ export class GameScene extends Phaser.Scene {
     const q = this.play.qb;
     const { peak } = this.play.throwParams(target.x, target.y);
     const fx = q.x;
-    const fy = q.y - 2;
+    const fy = q.y;
     const len = Math.hypot(target.x - fx, target.y - fy);
     const spacing = 5;
     const offset = (this.time.now / 1000 * 14) % spacing; // marching dots
@@ -194,7 +195,7 @@ export class GameScene extends Phaser.Scene {
     for (let s = offset; s < len; s += spacing) {
       const t = s / len;
       const x = Math.round(Phaser.Math.Linear(fx, target.x, t));
-      const z = Phaser.Math.Linear(6, 4, t) + 4 * peak * t * (1 - t);
+      const z = Phaser.Math.Linear(THROW_START_Z, CATCH_Z, t) + 4 * peak * t * (1 - t);
       const y = Math.round(Phaser.Math.Linear(fy, target.y, t) - z);
       g.fillStyle(PAL.ink, 0.5).fillRect(x, y + 1, 2, 2);
       g.fillStyle(col, 1).fillRect(x, y, 2, 2);

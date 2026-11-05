@@ -1,7 +1,8 @@
 // A single football player: smooth acceleration-based movement, 8-direction
 // facing, and idle/walk/run/punch(throw)/death(tackled) animations.
 
-import { TUNING, TEAMS, yd, toYards } from '../config/constants.js';
+import { TUNING, yd, toYards } from '../config/constants.js';
+import { PLAYER_ORIGIN } from '../config/assets.js';
 
 const DIRS_BY_OCTANT = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 
@@ -46,9 +47,9 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.engaged = null;                      // blocker <-> defender link
     this.ai = {};                             // per-play AI scratch data
 
-    this.setOrigin(0.5, 0.55);
-    if (scene.registry.get('playerTint')) this.setTint(TEAMS[team].jersey);
-    this.shadow = scene.add.image(x, y + 4, 'playershadow').setAlpha(0.28).setDepth(5);
+    // (x, y) is the player's feet
+    this.setOrigin(PLAYER_ORIGIN.x, PLAYER_ORIGIN.y);
+    this.shadow = scene.add.image(x, y, 'playershadow').setAlpha(0.3).setDepth(5);
     scene.add.existing(this);
     this.playAnim('idle');
   }
@@ -101,7 +102,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     }
     this._routeDriven = false;
 
-    this.shadow.setPosition(Math.round(this.x), Math.round(this.y) + 4);
+    this.shadow.setPosition(Math.round(this.x), Math.round(this.y));
     this.setDepth(10 + this.y / 1000);
     this.refreshAnim();
   }

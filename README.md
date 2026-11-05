@@ -78,8 +78,8 @@ src/
   ai/Blocking.js         blocker/defender engagements
   gfx/PixelFont.js       crisp 3x5 bitmap font
   gfx/PlaceholderArt.js  procedural sprites + palette swap
-assets/field/            SpawnCampGames "Football Sprites 2D" go here
-assets/players/          Lumenlore "Top Down Prototype Character Template" goes here
+assets/field/            SpawnCampGames "Football Sprites 2D" (field, football)
+assets/players/          Lumenlore "Top Down Prototype Character Template" sheets
 ```
 
 ### Where later stages plug in
@@ -95,16 +95,23 @@ assets/players/          Lumenlore "Top Down Prototype Character Template" goes 
 - **Stage 6:** a roster provides `ratings` for each `Player` in place of the
   role defaults.
 
-## Using the real sprite packs
+## Sprites
 
-Until the packs are added, all art is drawn in code, using the same sheet
-layout the real packs will use. To switch to the real art:
+The game uses these files from the sprite packs:
 
-1. Put the files in `assets/field/` and `assets/players/`.
-2. Fill in the `path` values in `src/config/assets.js`.
+- `assets/players/`: `Idle`, `Walk`, `Run`, `Right-Hand-Punch` (the QB's
+  throw) and `Death` (being tackled). Each sheet has 8 direction rows of 64x64
+  frames. Each team's colours are palette-swapped in code (see
+  `SHEET_COLOR_MAP` in `src/config/assets.js`).
+- `assets/field/FootballFieldNoBranding.png`: the field. It's rotated to run
+  vertically, and the field geometry in `src/config/constants.js` is
+  calibrated to it.
+- `assets/field/FootballFieldAccessories.png`: football spiral and tumble
+  frames. The power meter, aiming arrow and referee with flags are saved for
+  later stages.
 
-The player sheets need 8 direction rows (set the order in `DIR_ORDER`) and
-32x32 frames. The number of frames per row is worked out from the image width.
+If a file is missing, the game falls back to procedural placeholder art. The
+full sprite packs are kept on the `Sprites` branch.
 
 ## Credits
 

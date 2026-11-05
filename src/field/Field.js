@@ -2,7 +2,7 @@
 // owns the line of scrimmage / first-down line overlays.
 
 import {
-  PAL, TEAMS, WORLD_W, WORLD_H, FIELD_LEFT, FIELD_RIGHT, FIELD_W, ENDLINE_PAD, ENDZONE_YD,
+  PAL, TEAMS, WORLD_W, WORLD_H, FIELD_LEFT, FIELD_RIGHT, FIELD_W, ENDZONE_YD,
   CENTER_X, HASH_OFFSET_YD, yd, yardToY,
 } from '../config/constants.js';
 import { drawGlyph } from '../gfx/PixelFont.js';
@@ -12,15 +12,14 @@ const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 export class Field {
   constructor(scene) {
     this.scene = scene;
-    const hasGrassTile = scene.textures.exists('grass');
-    if (hasGrassTile) {
-      // Real grass tile from the sprite pack: tile it to cover the whole world.
-      scene.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'grass').setOrigin(0).setDepth(0);
+    if (scene.textures.exists('field-image')) {
+      // SpawnCampGames field, rotated at boot; constants.js is calibrated to it.
+      scene.add.image(0, 0, 'field-image').setOrigin(0).setDepth(0);
+    } else {
+      // Fallback: procedural field built from the same geometry constants.
+      if (!scene.textures.exists('field-baked')) scene.textures.addCanvas('field-baked', Field.bake(true));
+      scene.add.image(0, 0, 'field-baked').setOrigin(0).setDepth(1);
     }
-    if (!scene.textures.exists('field-baked')) {
-      scene.textures.addCanvas('field-baked', Field.bake(!hasGrassTile));
-    }
-    scene.add.image(0, 0, 'field-baked').setOrigin(0).setDepth(1);
 
     this.lines = scene.add.graphics().setDepth(2);
   }
@@ -110,8 +109,8 @@ export class Field {
     for (let yl = 10; yl <= 90; yl += 10) {
       const label = String(yl <= 50 ? yl : 100 - yl);
       const y = Math.round(yardToY(yl));
-      drawNumber(label, FIELD_LEFT + yd(8), y, Math.PI / 2);
-      drawNumber(label, FIELD_RIGHT - yd(8), y, -Math.PI / 2);
+      drawNumber(label, Math.round(FIELD_LEFT + yd(8)), y, Math.PI / 2);
+      drawNumber(label, Math.round(FIELD_RIGHT - yd(8)), y, -Math.PI / 2);
     }
 
     // Goal-line pylons

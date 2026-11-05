@@ -1,6 +1,11 @@
 // The football. Tracks a ground position plus a fake height (z): while in the
 // air it is drawn above its shadow and grows near the top of the arc.
 
+import { HAND_HEIGHT } from '../config/assets.js';
+
+export const THROW_START_Z = HAND_HEIGHT + 4; // released above the shoulder
+export const CATCH_Z = HAND_HEIGHT;
+
 export class Ball {
   constructor(scene) {
     this.scene = scene;
@@ -10,9 +15,10 @@ export class Ball {
     this.state = 'dead';       // held | air | dead
     this.carrier = null;
     this.flight = null;
+    this.hasAnims = scene.anims.exists('ball-spiral');
 
     this.shadow = scene.add.image(0, 0, 'ballshadow').setAlpha(0.35).setDepth(6);
-    this.sprite = scene.add.image(0, 0, 'football').setDepth(1000);
+    this.sprite = scene.add.sprite(0, 0, 'football', this.hasAnims ? 0 : undefined).setDepth(1000);
   }
 
   /** Where the ball is drawn (what the camera must keep on screen). */
@@ -23,6 +29,7 @@ export class Ball {
     this.state = 'held';
     this.carrier = player;
     this.flight = null;
+    this.stopSpin();
   }
 
   placeAt(x, y) {
@@ -32,7 +39,8 @@ export class Ball {
     this.gx = x;
     this.gy = y;
     this.z = 0;
-    this.render(0);
+    this.stopSpin();
+    this.render();
   }
 
   /**
@@ -40,25 +48,32 @@ export class Ball {
    * @param {number} duration seconds in the air
    * @param {number} peak     extra height at the top of the arc (px)
    */
-  launch(fromX, fromY, toX, toY, duration, peak, onLand, startZ = 6, endZ = 4) {
+  launch(fromX, fromY, toX, toY, duration, peak, onLand, startZ = THROW_START_Z, endZ = CATCH_Z, spin = 'ball-spiral') {
     this.state = 'air';
     this.carrier = null;
     this.flight = { fromX, fromY, toX, toY, duration, peak, onLand, startZ, endZ, t: 0 };
     this.gx = fromX;
     this.gy = fromY;
     this.z = startZ;
+    // the spiral sprite is drawn horizontally: turn it 90deg for up/down throws
+    this.sprite.rotation = Math.abs(toY - fromY) > Math.abs(toX - fromX) ? Math.PI / 2 : 0;
+    if (this.hasAnims) this.sprite.play(spin);
   }
 
-  /** Normalised flight progress 0..1, or null if not in the air. */
-  get progress() { return this.flight ? this.flight.t : null; }
+  stopSpin() {
+    if (!this.hasAnims) return;
+    this.sprite.stop();
+    this.sprite.setFrame(0);
+  }
 
   update(dt) {
     if (this.state === 'held' && this.carrier) {
       const p = this.carrier;
       const v = DIR_OFFSET[p.facing] || [0, 0];
-      this.gx = p.x + v[0] * 4;
-      this.gy = p.y + v[1] * 3 + 1;
-      this.z = p.state === 'down' ? 0 : 3;
+      this.gx = p.x + v[0] * 5;
+      this.gy = p.y + v[1] * 2 + 1;
+      this.z = p.state === 'down' ? 2 : HAND_HEIGHT;
+      this.sprite.rotation = v[1] !== 0 && v[0] === 0 ? Math.PI / 2 : 0;
     } else if (this.state === 'air' && this.flight) {
       const f = this.flight;
       f.t = Math.min(1, f.t + dt / f.duration);
@@ -70,35 +85,29 @@ export class Ball {
         const cb = f.onLand;
         this.flight = null;
         this.state = 'dead';
+        this.stopSpin();
         cb?.();
       }
     }
-    this.render(dt);
+    this.render();
   }
 
   render() {
-    const prevX = this.sprite.x;
-    const prevY = this.sprite.y;
-    const vx = Math.round(this.viewX);
-    const vy = Math.round(this.viewY);
-    this.sprite.setPosition(vx, vy);
+    this.sprite.setPosition(Math.round(this.viewX), Math.round(this.viewY));
     // grows near the top of the arc, shrinks coming down
-    this.sprite.setScale(1 + Math.min(0.6, this.z / 45));
-    if (this.state === 'air') {
-      const ang = Math.atan2(vy - prevY, vx - prevX);
-      if (Math.hypot(vx - prevX, vy - prevY) > 0.2) {
-        const step = Math.PI / 8; // rotate in 22.5 deg steps to stay chunky
-        this.sprite.rotation = Math.round(ang / step) * step;
-      }
-    } else if (this.state === 'held' && this.carrier) {
-      this.sprite.rotation = 0;
-    }
-    this.sprite.setDepth(this.state === 'air' ? 1000 : 10 + this.gy / 1000 + 0.0005);
-    this.sprite.setVisible(true);
+    const lift = Math.max(0, this.z - CATCH_Z);
+    this.sprite.setScale(this.state === 'air' ? 1 + Math.min(0.6, lift / 50) : 1);
 
-    this.shadow.setPosition(Math.round(this.gx), Math.round(this.gy) + 1);
-    const h = Math.min(1, this.z / 40);
-    this.shadow.setScale(1 - h * 0.3).setAlpha(this.z > 1 ? 0.35 - h * 0.15 : 0);
+    if (this.state === 'air') this.sprite.setDepth(1000);
+    else if (this.carrier) {
+      // in front of the carrier when he faces the camera, behind when he faces away
+      const away = ['N', 'NE', 'NW'].includes(this.carrier.facing);
+      this.sprite.setDepth(this.carrier.depth + (away ? -0.0001 : 0.0001));
+    } else this.sprite.setDepth(10 + this.gy / 1000);
+
+    this.shadow.setPosition(Math.round(this.gx), Math.round(this.gy));
+    const h = Math.min(1, lift / 50);
+    this.shadow.setScale(1 - h * 0.3).setAlpha(this.state === 'air' ? 0.4 - h * 0.15 : this.carrier ? 0 : 0.3);
   }
 
   destroy() {

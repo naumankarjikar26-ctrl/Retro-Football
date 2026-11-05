@@ -1,10 +1,22 @@
-// Loads real assets (when paths are set in config/assets.js), otherwise builds
-// placeholders, then slices sheets into frames and registers all animations.
+// Loads the sprite packs, rotates the field, cuts the football frames,
+// palette-swaps the player sheets per team, slices them and builds animations.
+// Anything missing falls back to procedural placeholder art.
 
-import { DIR_ORDER, PLAYER_FRAME, PLAYER_ANIMS, PLAYER_KEY_COLORS, FIELD_ASSETS } from '../config/assets.js';
+import {
+  DIR_ORDER, PLAYER_FRAME, PLAYER_ANIMS, PLAYER_KEY_COLORS, SHEET_COLOR_MAP,
+  FIELD_ASSETS, FOOTBALL_SPIRAL, FOOTBALL_TUMBLE,
+} from '../config/assets.js';
 import { TEAMS } from '../config/constants.js';
 import { buildPlaceholderPlayerSheets, buildPlaceholderMisc, paletteSwap } from '../gfx/PlaceholderArt.js';
 import { registerPixelFont } from '../gfx/PixelFont.js';
+
+const canvasFromImage = (img) => {
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  c.getContext('2d').drawImage(img, 0, 0);
+  return c;
+};
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -14,55 +26,102 @@ export class BootScene extends Phaser.Scene {
       if (def.path) this.load.image(`player-src-${anim}`, def.path);
     }
     for (const [key, def] of Object.entries(FIELD_ASSETS)) {
-      if (def.path) this.load.image(key, def.path);
+      if (def.path) this.load.image(`src-${key}`, def.path);
     }
   }
 
   create() {
     registerPixelFont(this);
-    buildPlaceholderMisc(this); // only fills in keys that are still missing below
-    const placeholders = buildPlaceholderPlayerSheets();
+    this.buildField();
+    this.buildFootball();
+    buildPlaceholderMisc(this); // fills in only what is still missing
+    this.buildPlayers();
+    this.scene.start('Game');
+  }
 
-    const teamColorMap = (team) => {
-      const t = TEAMS[team];
-      return {
-        [PLAYER_KEY_COLORS.jersey]: t.jersey,
-        [PLAYER_KEY_COLORS.trim]: t.trim,
-        [PLAYER_KEY_COLORS.helmet]: t.helmet,
-        [PLAYER_KEY_COLORS.stripe]: t.stripe,
-        [PLAYER_KEY_COLORS.pants]: t.pants,
-      };
-    };
+  /** The field image is horizontal; rotate it 90deg clockwise so the left end zone is at the top. */
+  buildField() {
+    if (!this.textures.exists('src-field')) return;
+    const img = this.textures.get('src-field').getSourceImage();
+    const c = document.createElement('canvas');
+    c.width = img.height;
+    c.height = img.width;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(c.width, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(img, 0, 0);
+    this.textures.addCanvas('field-image', c);
+  }
 
-    // Real sheets with no known jersey colours fall back to a tint per team.
-    let useTint = false;
+  /** Cut the spiral + tumble football frames into one strip texture. */
+  buildFootball() {
+    if (!this.textures.exists('src-accessories')) return;
+    const img = this.textures.get('src-accessories').getSourceImage();
+    const frames = [...FOOTBALL_SPIRAL, ...FOOTBALL_TUMBLE];
+    const fw = 16;
+    const fh = 11;
+    const c = document.createElement('canvas');
+    c.width = fw * frames.length;
+    c.height = fh;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    frames.forEach(([x, y, w, h], i) => {
+      // centre each frame in its cell
+      ctx.drawImage(img, x, y, w, h, i * fw + Math.floor((fw - w) / 2), Math.floor((fh - h) / 2), w, h);
+    });
+    const tex = this.textures.addCanvas('football', c);
+    frames.forEach((_, i) => tex.add(i, 0, i * fw, 0, fw, fh));
+    this.anims.create({
+      key: 'ball-spiral', frameRate: 24, repeat: -1,
+      frames: FOOTBALL_SPIRAL.map((_, i) => ({ key: 'football', frame: i })),
+    });
+    this.anims.create({
+      key: 'ball-tumble', frameRate: 18, repeat: -1,
+      frames: FOOTBALL_TUMBLE.map((_, i) => ({ key: 'football', frame: FOOTBALL_SPIRAL.length + i })),
+    });
+  }
+
+  buildPlayers() {
+    let placeholders = null;
     for (const anim of Object.keys(PLAYER_ANIMS)) {
       const srcKey = `player-src-${anim}`;
+      const real = this.textures.exists(srcKey);
       let source;
-      if (this.textures.exists(srcKey)) {
-        const img = this.textures.get(srcKey).getSourceImage();
-        source = document.createElement('canvas');
-        source.width = img.width;
-        source.height = img.height;
-        source.getContext('2d').drawImage(img, 0, 0);
-        if (!PLAYER_ANIMS[anim].recolor) useTint = true;
+      if (real) {
+        source = canvasFromImage(this.textures.get(srcKey).getSourceImage());
       } else {
+        placeholders ??= buildPlaceholderPlayerSheets();
         source = placeholders[anim];
       }
       for (const team of Object.keys(TEAMS)) {
         const key = `player-${team}-${anim}`;
-        const canvas = useTint ? source : paletteSwap(source, teamColorMap(team));
-        this.textures.addCanvas(key, canvas);
+        this.textures.addCanvas(key, paletteSwap(source, real ? this.sheetMap(team) : this.keyMap(team)));
         this.sliceSheet(key);
         this.makeAnims(team, anim, key);
       }
     }
-    this.registry.set('playerTint', useTint);
-
-    this.scene.start('Game');
   }
 
-  /** Work out frame layout from the image size and add numbered frames. */
+  sheetMap(team) {
+    const t = TEAMS[team];
+    const map = {};
+    for (const [from, slot] of Object.entries(SHEET_COLOR_MAP)) map[from] = t[slot];
+    return map;
+  }
+
+  keyMap(team) {
+    const t = TEAMS[team];
+    return {
+      [PLAYER_KEY_COLORS.jersey]: t.jersey,
+      [PLAYER_KEY_COLORS.trim]: t.trim,
+      [PLAYER_KEY_COLORS.helmet]: t.helmet,
+      [PLAYER_KEY_COLORS.stripe]: t.stripe,
+      [PLAYER_KEY_COLORS.pants]: t.pants,
+    };
+  }
+
+  /** Work out the frame layout from the image size and add numbered frames. */
   sliceSheet(key) {
     const tex = this.textures.get(key);
     const img = tex.getSourceImage();
