@@ -1,31 +1,42 @@
-// Picks the next play automatically from the designed playbook, weighted by
-// the down, distance and field position. Never the same play twice in a row.
-// Kicks are only ever called from the playbook.
+// Picks the next play automatically. A category (run / short / long / pa) is
+// chosen by down and distance, then a play is drawn from that category's
+// shuffle bag, so every play in it gets called before any repeats.
+// Never the same play twice in a row. Kicks are only called from the playbook.
 
 import { PLAYBOOK } from './playbook.js';
 
-/** Category weights for a situation (run / short / long / pa). */
+/** Category weights for down, distance and field position. */
 export function situationWeights(gs) {
-  const toGo = gs.toGo;
-  if (gs.ballOn >= 90) return { run: 3, short: 3, long: 0, pa: 3, tag: 'RED ZONE' };       // inside the opp 10
-  if (gs.down >= 3 && toGo >= 7) return { run: 0.5, short: 4, long: 4, pa: 1, tag: '3RD/4TH & LONG' };
-  if (toGo <= 2) return { run: 6, short: 1.5, long: 0.25, pa: 1, tag: 'SHORT YARDAGE' };
-  return { run: 1, short: 1, long: 1, pa: 1, tag: 'NORMAL' };
+  const { down, toGo } = gs;
+  const late = down >= 3;
+  let w;
+  if (toGo <= 2) w = late ? { run: 8, short: 2, long: 0, pa: 0.5 } : { run: 5, short: 2, long: 0.5, pa: 1.5 };
+  else if (toGo <= 6) w = late ? { run: 1.5, short: 6, long: 1, pa: 1 } : { run: 3, short: 3, long: 1, pa: 2 };
+  else if (toGo <= 12) w = late ? { run: 0.3, short: 3, long: 5, pa: 1 } : { run: 3, short: 3, long: 2, pa: 2 };
+  else w = late ? { run: 0, short: 1, long: 8, pa: 1 } : { run: 1, short: 2, long: 4, pa: 2 };
+  if (gs.ballOn >= 90) w.long = 0; // no room for deep shots inside the opp 10
+  return w;
+}
+
+const bags = {}; // cat -> play ids not yet called this cycle
+
+function drawFrom(cat, lastId) {
+  const all = PLAYBOOK.filter((p) => p.cat === cat);
+  if (!bags[cat] || bags[cat].length === 0) bags[cat] = all.map((p) => p.id);
+  let options = bags[cat].filter((id) => id !== lastId);
+  if (!options.length) { bags[cat] = all.map((p) => p.id); options = bags[cat].filter((id) => id !== lastId); }
+  const id = options[Math.floor(Math.random() * options.length)];
+  bags[cat] = bags[cat].filter((x) => x !== id);
+  return all.find((p) => p.id === id);
 }
 
 export function autoPick(gs, lastId = null) {
   const w = situationWeights(gs);
-  const pool = PLAYBOOK.filter((p) => w[p.cat] > 0 && p.id !== lastId);
-  // weight per play = its category weight / plays in that category
-  const counts = {};
-  for (const p of pool) counts[p.cat] = (counts[p.cat] || 0) + 1;
-  const total = pool.reduce((a, p) => a + w[p.cat] / counts[p.cat], 0);
+  const cats = Object.keys(w).filter((c) => w[c] > 0);
+  const total = cats.reduce((a, c) => a + w[c], 0);
   let r = Math.random() * total;
-  for (const p of pool) {
-    r -= w[p.cat] / counts[p.cat];
-    if (r <= 0) return p;
-  }
-  return pool[pool.length - 1];
+  const cat = cats.find((c) => (r -= w[c]) <= 0) ?? cats[cats.length - 1];
+  return drawFrom(cat, lastId);
 }
 
 export const CAT_LABEL = { run: 'RUN', short: 'SHORT PASS', long: 'LONG PASS', pa: 'PLAY ACTION', special: 'KICK' };

@@ -127,12 +127,17 @@ result: CATCH!, DROPPED, INCOMPLETE, BROKEN UP or INTERCEPTED.
 
 ## Play calling (Stage 2)
 
-Every play is called automatically, at random, weighted by the situation:
+Every play is called automatically. The down and distance pick the kind of
+play, then a play is drawn from a shuffle bag, so every play of that kind is
+called before any repeats (and never the same play twice in a row):
 
-- **3rd/4th and 7+:** mostly short and long passes.
-- **1-2 yards to go:** mostly runs.
-- **Inside the opponent's 10:** runs, short passes and play action; no long passes.
-- **Otherwise:** an even mix. The same play is never called twice in a row.
+| Situation | Mostly |
+| --- | --- |
+| 1-2 to go | runs (3rd/4th: almost always a run) |
+| 3-6 to go | balanced; 3rd/4th leans to short passes |
+| 7-12 to go | balanced; 3rd/4th leans to long passes |
+| 13+ to go | long passes (3rd/4th: almost always deep) |
+| Inside the opponent's 10 | no long passes |
 
 The called play shows small at the top (e.g. "POWER - RUN"). The **PLAYBOOK**
 button (`P`) opens the playbook with that play highlighted: pick a card to
