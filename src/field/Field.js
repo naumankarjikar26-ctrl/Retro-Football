@@ -101,7 +101,13 @@ export class Field {
       if (yl % 5 === 0) {
         // goal lines 3px, every 5 yards 2px
         rect(white, yl === 0 || yl === 100 ? x - 1 : x - 1, top, yl === 0 || yl === 100 ? 3 : 2, h);
-      } else {
+      }
+    }
+    // tick / hash marks: two evenly spaced between each pair of 5-yard lines
+    // (a wider gap than one per yard)
+    for (let yl = 0; yl < 100; yl += 5) {
+      for (const f of [5 / 3, 10 / 3]) {
+        const x = Math.round(yardToX(yl + f));
         rect(white, x - 1, top, 2, 4);
         rect(white, x - 1, bottom - 4, 2, 4);
         rect(white, x - 1, hashTop - 2, 2, 5);
