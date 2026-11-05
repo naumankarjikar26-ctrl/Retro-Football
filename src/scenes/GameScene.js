@@ -6,13 +6,13 @@
 // higher. A tiny pull cancels.
 
 import {
-  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, yd, groundLen,
+  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, yd, groundLen, yardToX, latToY,
 } from '../config/constants.js';
 import { Field } from '../field/Field.js';
 import { CameraController } from '../camera/CameraController.js';
 import { GameState } from '../systems/GameState.js';
 import { PlayController } from '../systems/PlayController.js';
-import { DEFAULT_PLAY } from '../plays/playbook.js';
+import { playById } from '../plays/playbook.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 import { nearest } from '../ai/OffenseAI.js';
@@ -39,6 +39,10 @@ export class GameScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER');
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
+    this.input.keyboard.on('keydown-A', () => this.audible());
+    // ball carrier cuts: one press = one cut (no holding)
+    for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(-1));
+    for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(1));
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
     this.input.on('pointermove', (p) => this.onPointerMove(p));
     this.input.on('pointerup', (p) => this.onPointerUp(p));
@@ -63,11 +67,30 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- flow
 
+  /** Between plays: open the play-call screen (Stage 2). */
   newPlay(first = false) {
+    this.calling = true;
+    this.aim = null;
+    this.pendingThrow = null;
+    this.aimGfx.clear();
+    if (first && !this.play) {
+      this.cameras.main.centerOn(yardToX(this.gs.ballOn) + yd(5), latToY(this.gs.ballLat));
+    }
+    bus.emit(EV.STATE, this.gs);
+    bus.emit(EV.HINT, 'CALL A PLAY  (1-7, Q = QUICK PICK)');
+    this.scene.launch('PlayCall', { onPick: (def) => this.startPlay(def, { first }) });
+    this.scene.bringToTop('PlayCall');
+  }
+
+  /** Line up the called play. `audibled` keeps the one audible per play used up. */
+  startPlay(def, { first = false, audibled = false } = {}) {
+    this.calling = false;
+    this.playDef = def;
+    this.audibleUsed = audibled;
     this.play?.destroy();
     this.aim = null;
     this.aimGfx.clear();
-    this.play = new PlayController(this, this.gs, DEFAULT_PLAY);
+    this.play = new PlayController(this, this.gs, def);
     this.field.setLines(this.gs.ballOn, this.gs.firstDownAt);
     this.drawRoutes();
 
@@ -79,11 +102,21 @@ export class GameScene extends Phaser.Scene {
 
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
-    bus.emit(EV.HINT, 'PRESS + PULL BACK: SNAP + THROW');
+    bus.emit(EV.PLAY_CALLED, def);
+    bus.emit(EV.HINT, def.type === 'run' ? 'PRESS / SPACE TO SNAP  -  A = AUDIBLE' : 'PRESS + PULL BACK: SNAP + THROW  -  A = AUDIBLE');
+  }
+
+  /** One audible per play, at the line: pass -> run, run -> quick pass. */
+  audible() {
+    if (this.calling || !this.play || this.play.phase !== 'presnap' || this.audibleUsed) return;
+    const next = playById(this.playDef.audible);
+    if (!next) return;
+    bus.emit(EV.AUDIBLE, next);
+    this.startPlay(next, { audibled: true });
   }
 
   onAction() {
-    if (!this.play) return;
+    if (this.calling || !this.play) return;
     if (this.play.phase === 'presnap') this.play.snap();
     else if (this.play.phase === 'dead' && this.deadTimer > 0.6) this.newPlay();
   }
@@ -101,12 +134,19 @@ export class GameScene extends Phaser.Scene {
   // ---------------------------------------------------------------- input
 
   onPointerDown(p) {
+    if (this.calling || !this.play) return;
+    if (this.scene.get('HUD').overButton?.(p)) return; // e.g. the audible button
     const ph = this.play?.phase;
     if (ph === 'dead') { this.onAction(); return; }
+    // ball carrier: tap above / below him to cut that way
+    if (ph === 'run' && this.play.carrier === this.play.controlled) {
+      this.play.nudge(p.worldY < this.play.carrier.y ? -1 : 1);
+      return;
+    }
     // one motion: pressing snaps the ball AND starts the pull-back
     if (ph === 'presnap') this.play.snap();
     // anywhere on screen starts the pull; it is measured from this press point
-    if (!this.play.qbScrambling) {
+    if (!this.play.qbScrambling && this.play.def.type !== 'run') {
       this.aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y, id: p.id };
     }
   }
@@ -162,7 +202,9 @@ export class GameScene extends Phaser.Scene {
 
   update(_t, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
+    if (!this.play) return;            // first play-call screen
     this.play.update(dt, this.readInput());
+    if (this.calling) { this.camCtl.update(dt); return; } // menu open over the last play
     if (this.pendingThrow && this.play.canThrow()) {
       this.play.throwTo(this.pendingThrow.x, this.pendingThrow.y);
       this.pendingThrow = null;

@@ -29,7 +29,7 @@ export class HUDScene extends Phaser.Scene {
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, HINT_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, 1, PAL.dusk).setOrigin(0);
     this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 3, '', PAL.silver, 3).setAlign(0.5);
-    this.onHint('PRESS + PULL BACK: SNAP + THROW');
+    this.onHint('CALL A PLAY  (1-7, Q = QUICK PICK)');
 
     // result banner (shown only while the play is dead)
     this.banner = this.add.container(VIEW_W / 2, BAR_H + 34).setVisible(false);
@@ -41,6 +41,17 @@ export class HUDScene extends Phaser.Scene {
     // pull-back indicator
     this.pullGfx = this.add.graphics();
 
+    // current play name (bottom-left of the field) and the audible button (bottom-right)
+    this.playName = new PixelText(this, 6, VIEW_H - HINT_H - 14, '', PAL.sand, 2);
+    this.audBtn = this.add.container(VIEW_W - 6, VIEW_H - HINT_H - 6);
+    this.audBg = this.add.rectangle(0, 0, 150, 22, PAL.ink, 0.9).setOrigin(1, 1).setStrokeStyle(2, PAL.sand);
+    this.audText = new PixelText(this, -75, -16, '', PAL.sand, 2).setAlign(0.5);
+    this.audBtn.add([this.audBg, this.audText]);
+    this.audBg.setInteractive({ useHandCursor: true });
+    this.audBg.on('pointerup', () => this.gameScene.audible());
+    this.audBtn.setVisible(false);
+    bus.on(EV.PLAY_CALLED, (def) => this.playName.setText(def.name), this);
+
     bus.on(EV.STATE, this.onState, this);
     bus.on(EV.HINT, this.onHint, this);
     bus.on(EV.PRESNAP, () => this.banner.setVisible(false), this);
@@ -51,6 +62,16 @@ export class HUDScene extends Phaser.Scene {
 
   update() {
     this.drawPull(this.gameScene.aim, this.gameScene.pullInfo?.());
+    const g = this.gameScene;
+    const canAudible = !!g.play && !g.calling && g.play.phase === 'presnap' && !g.audibleUsed && !!g.playDef?.audible;
+    this.audBtn.setVisible(canAudible);
+    if (canAudible) this.audText.setText(g.playDef.type === 'run' ? 'AUDIBLE: PASS' : 'AUDIBLE: RUN');
+    this.playName.setVisible(!!g.play && !g.calling);
+  }
+
+  /** True if a screen point is over a HUD button (so it doesn't snap the ball). */
+  overButton(p) {
+    return this.audBtn.visible && this.audBg.getBounds().contains(p.x, p.y);
   }
 
   /** Circle at the press point and a line to the current pointer. */

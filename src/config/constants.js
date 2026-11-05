@@ -91,6 +91,9 @@ export const TUNING = {
   maxThrowYd: 60,          // throw length at full pull
   catchRadiusYd: 1.7,
   tackleRadiusYd: 1.15,
+  // Ball carrier cuts: each press moves him this many yards sideways
+  cutYards: 3.5,
+  cutSharpness: 1.8,       // how hard he angles while cutting (higher = snappier)
   // Chance a ball carrier escapes a tackle attempt (3 in 8). Later: from ratings.
   brokenTackleChance: 3 / 8,
   tackleRetryDelay: 1.0,     // seconds before a whiffed defender may try again

@@ -77,29 +77,58 @@ Then open <http://localhost:8080>.
 
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
+| Call a play | `1`-`7` or click a card, `Q` = Quick Pick | Tap a card |
+| Audible (once per play, at the line) | `A` or the AUDIBLE button | Tap AUDIBLE |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
-| Snap only | `Space` / `Enter` | n/a |
+| Snap only / run plays | `Space` / `Enter` | Tap |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
-| Steer the ball carrier | Arrows or WASD (he runs right on his own) | Hold and drag up or down to steer |
+| Ball carrier cut | Press up / down (one press = one cut) | Tap above / below him |
 | Next play | `Space` / click | Tap |
 
-**Throwing works like a slingshot, in one motion.** Pressing snaps the ball. Keep holding, pull back anywhere on the
-screen, not on the ball, and pull back away from where you want the ball to
-go. The pull is measured from the spot you first pressed:
+**Throwing works like a slingshot, in one motion.** Pressing snaps the ball.
+Keep holding, then pull back anywhere on the screen, away from where you want
+the ball to go. The pull is measured from the spot you first pressed:
 
-- **Power:** a short pull is a quick, flat 5-10 yard pass. A full pull of
-  about 56 px, roughly a third of the screen height, throws 60 yards on a high,
-  slow arc.
-- **Aiming aids:** while you pull, you see a ring where you pressed and a line
-  to your finger or cursor. A dotted arc runs from the QB to a landing marker.
+- **Power:** a short pull is a quick, flat 5-10 yard pass. A full pull throws
+  60 yards on a high, slow arc.
+- **Aiming aids:** while you pull, a blue ring shows where you pressed, with a
+  line to your finger or cursor. A dotted arc runs from the QB to a landing
+  marker.
 - **Cancelling:** release inside the ring to cancel the throw.
+
+**Running with the ball:** after a catch or handoff, the ball carrier runs
+straight downfield on his own. Each press of up or down (or a tap above or
+below him) cuts him about 3.5 yards over (`cutYards` in
+`src/config/constants.js`).
+
+## Play calling (Stage 2)
+
+Before every snap, a play-call screen shows a card for each play, with its
+name, type and a mini route diagram:
+
+| # | Play | Type | Audible to |
+| --- | --- | --- | --- |
+| 1 | Spread Post | Pass | Inside Zone |
+| 2 | Four Verts | Pass | Inside Zone |
+| 3 | Quick Slants | Pass (quick) | Inside Zone |
+| 4 | Curl Flat | Pass | Outside Toss |
+| 5 | RB Screen | Screen | Inside Zone |
+| 6 | Inside Zone | Run (handoff) | Quick Slants |
+| 7 | Outside Toss | Run (pitch) | Quick Slants |
+
+**QUICK PICK** calls a random play. At the line you get **one audible** per
+play: passes switch to a run, and runs switch to a quick pass.
+
+On runs, the QB hands off (or pitches) automatically, the receivers block, and
+you control the runner after the handoff. Plays are defined in
+`src/plays/playbook.js`.
 
 ## Stages
 
 - [x] **Stage 1: One playable play.** Formations, smooth routes, snap,
   dotted-arc throwing, catch/incompletion, run after catch, tackles, sacks, QB
   scrambles, down and distance, reset at the new spot.
-- [ ] **Stage 2: Play calling.** Pick from 6-8 plays (passes, runs, a screen),
+- [x] **Stage 2: Play calling.** Pick from 6-8 plays (passes, runs, a screen),
   a Quick Pick button, and one audible at the line.
 - [ ] **Stage 3: Snap cadence.** Choose the snap count in the huddle. The QB
   calls a cadence in a speech bubble, and there's one live colour per game.
@@ -123,6 +152,7 @@ src/
   config/assets.js       sprite manifest, frame size, direction row order
   scenes/BootScene.js    loads/builds textures, slices sheets, makes animations
   scenes/GameScene.js    input, camera, route drawing, aiming arc, play flow
+  scenes/PlayCallScene.js  play-call screen (cards, mini diagrams, Quick Pick)
   scenes/HUDScene.js     top score bar, bottom hint bar, result banner, pull indicator
   systems/PlayController.js  one live play: snap -> throw -> catch -> tackle
   systems/GameState.js   downs, distance, ball spot, score

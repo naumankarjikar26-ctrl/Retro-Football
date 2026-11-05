@@ -19,6 +19,11 @@ export const ROUTES = {
   curl:   { points: [[0, 0], [0, 9], [-0.5, 11], [-1.5, 10], [-1.8, 9]], settle: true, curve: true },
   flat:   { points: [[0, 0], [1.5, 0.8], [5, 2], [14, 3]], curve: true },
   wheel:  { points: [[0, 0], [3, 0.5], [7, 2.5], [9, 7], [9.5, 30]], curve: true },
+  screen: { points: [[0, 0], [2, -1.5], [6, -1.5]], settle: true, curve: true },  // behind the line
+  // run paths (for the ball carrier on run plays): toward the QB for the
+  // handoff, then through the line / around the edge
+  runInside: { points: [[0, 0], [-1.6, 0.3], [-2.2, 3], [-2.2, 14]], curve: true },
+  runToss:   { points: [[0, 0], [2, 0.2], [6, 3], [7, 14]], curve: true },
   block:  { points: [[0, 0]], settle: true },
 };
 

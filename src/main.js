@@ -2,6 +2,7 @@ import { VIEW_W, VIEW_H, PAL } from './config/constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { HUDScene } from './scenes/HUDScene.js';
+import { PlayCallScene } from './scenes/PlayCallScene.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -17,7 +18,7 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   input: { activePointers: 2 },
-  scene: [BootScene, GameScene, HUDScene],
+  scene: [BootScene, GameScene, HUDScene, PlayCallScene],
 };
 
 window.game = new Phaser.Game(config);

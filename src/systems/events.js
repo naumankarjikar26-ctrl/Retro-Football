@@ -11,6 +11,9 @@ export const EV = {
   INCOMPLETE: 'incomplete',     // ({ reason })
   TACKLE: 'tackle',             // ({ carrier, tackler })
   BROKEN_TACKLE: 'brokenTackle', // ({ carrier, tackler })
+  HANDOFF: 'handoff',           // ({ runner })
+  PLAY_CALLED: 'playCalled',    // (playDef)
+  AUDIBLE: 'audible',           // (newPlayDef)
   PLAY_END: 'playEnd',          // (result)
   STATE: 'state',               // (gameState) down/distance/score changed
   HINT: 'hint',                 // (text) contextual control hint

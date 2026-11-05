@@ -14,6 +14,7 @@ export function updateOffense(play, dt) {
     if (phase === 'run') { blockDownfield(p, play, time); continue; }
 
     if (p.role === 'OL') { passProtect(p, play, time); continue; }
+    if (p.runBlocker) { blockDownfield(p, play, time); continue; } // run play: receivers block
 
     if (p.route) {
       if (phase === 'air' && p === play.intended) attackBall(p, play);
@@ -62,7 +63,7 @@ function passProtect(p, play, time) {
     man = nearest(p, play.defense.filter((d) => d.job.type === 'rush' && !d.engaged && d.state !== 'down'), yd(8));
   }
   if (man) {
-    driveBlocker(p, man, play.controlled || play.qb, time);
+    driveBlocker(p, man, play.runner || play.controlled || play.qb, time);
   } else {
     // nobody to block: hold the pocket
     p.moveToward(p.ai.homeX - yd(1.5), p.ai.homeY, 0.6);
@@ -70,7 +71,7 @@ function passProtect(p, play, time) {
 }
 
 function blockDownfield(p, play, time) {
-  const carrier = play.carrier;
+  const carrier = play.carrier || play.runner; // before the handoff, block for the runner
   if (!carrier) { p.stop(); return; }
   if (p.engaged) { driveBlocker(p, p.engaged, carrier, time); return; }
   // pick up the closest free defender near the ball carrier

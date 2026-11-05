@@ -73,6 +73,7 @@ export class PlayController {
       const outSign = Math.sign(p.y - this.ballY) || 1;
       p.route = buildRoute(routeName, p.x, p.y, outSign);
       p.route.delay = this.def.routeDelay?.[slot] || 0;
+      if (!p.route.curve) { p.route = null; p.runBlocker = true; continue; } // 'block': blocks for the run
       this.receivers.push(p);
     }
     for (const [slot, target] of Object.entries(this.def.blocking)) {
@@ -105,7 +106,7 @@ export class PlayController {
 
   canThrow() {
     return this.phase === 'qb' && this.ball.carrier === this.qb && this.qb.state !== 'throwing'
-      && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3);
+      && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3) && this.def.type !== 'run';
   }
 
   /**
@@ -161,6 +162,7 @@ export class PlayController {
     this.keepAIInBounds();
     this.ball.update(dt);
 
+    if (this.phase === 'qb' && this.def.type === 'run') this.checkHandoff();
     if (this.phase === 'qb' || this.phase === 'run') this.checkCarrier();
   }
 
@@ -174,6 +176,8 @@ export class PlayController {
 
     if (p === this.qb && this.phase !== 'run') {
       if (p.state === 'throwing') return;
+      // run plays: the QB stays put and hands off; your keys steer the runner after
+      if (this.def.type === 'run') { p.stop(); return; }
       if (hasKeys) p.moveDir(input.dx, input.dy, input.aiming ? 0.55 : 1);
       else if (p.x > this.dropbackX + 1) p.moveToward(this.dropbackX, p.y, 0.55);
       else p.stop();
@@ -185,14 +189,19 @@ export class PlayController {
       return;
     }
 
-    // Ball carrier: runs downfield (right) by default, keys or pointer steer.
-    let dx = input.dx;
-    let dy = input.dy;
-    if (!hasKeys) {
-      dx = 1;
-      dy = input.steerY !== null ? Phaser.Math.Clamp((input.steerY - p.y) / ydLat(3), -1, 1) : 0;
-    }
-    p.moveDir(dx, dy, 1);
+    // Ball carrier: always runs straight downfield. Each press of up/down (or a
+    // tap above/below him) cuts him over one lane; he then runs straight again.
+    const toLane = this.laneY - p.y;
+    const dy = Phaser.Math.Clamp(toLane / ydLat(0.6), -1, 1) * TUNING.cutSharpness;
+    p.moveDir(1, dy, 1);
+  }
+
+  /** Cut one lane up (-1) or down (+1). Called on a key press / tap, not a hold. */
+  nudge(dir) {
+    if (this.phase !== 'run' || !this.carrier || this.carrier !== this.controlled) return;
+    const top = FIELD_TOP - ydLat(1);      // let him step out only if you steer him there
+    const bottom = FIELD_BOTTOM + ydLat(1);
+    this.laneY = Phaser.Math.Clamp(this.laneY + dir * ydLat(TUNING.cutYards), top, bottom);
   }
 
   /** Only the player the user controls may ever step out of bounds. */
@@ -209,12 +218,36 @@ export class PlayController {
     }
   }
 
+  /** The ball carrier on a run play (before he has the ball). */
+  get runner() { return this.def.runner ? this.offenseBySlot[this.def.runner] : null; }
+
+  /** Run plays: hand off (inside) or pitch (toss) once the runner reaches the QB. */
+  checkHandoff() {
+    const r = this.runner;
+    if (!r || this.handingOff || this.ball.carrier !== this.qb || this.qb.state === 'down') return;
+    if (gdist(r, this.qb) > yd(this.def.handoffYd || 1.3)) return;
+    this.handingOff = true;
+    if ((this.def.handoffYd || 0) > 2) {
+      // pitch: short underhand toss that leads the runner
+      const to = r.predict(0.3);
+      this.ball.launch(this.qb.x, this.qb.y, to.x, to.y, 0.3, 4, () => {
+        this.ball.holdBy(r);
+        if (this.phase === 'qb') this.startRun(r);
+      });
+    } else {
+      this.ball.holdBy(r);
+      this.startRun(r);
+    }
+    bus.emit(EV.HANDOFF, { runner: r });
+  }
+
   startRun(carrier) {
     this.phase = 'run';
     this.carrier = carrier;
     this.controlled = carrier;
     carrier.route = null;
-    bus.emit(EV.HINT, 'ARROWS/WASD OR HOLD TO STEER');
+    this.laneY = carrier.y; // runs straight from where he caught it
+    bus.emit(EV.HINT, 'PRESS UP / DOWN (OR TAP ABOVE / BELOW) TO CUT');
   }
 
   resolveCatch() {
