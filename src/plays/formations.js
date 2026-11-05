@@ -19,6 +19,91 @@ export const OFFENSE_FORMATIONS = {
       Z:  { role: 'WR', at: [18, 1.8] },
     },
   },
+  // QB under center, fullback (H) and tailback stacked behind him
+  iForm: {
+    name: 'I-FORM',
+    players: {
+      LT: { role: 'OL', at: [-2.6, 0.6] },
+      LG: { role: 'OL', at: [-1.3, 0.6] },
+      C:  { role: 'OL', at: [0, 0.6] },
+      RG: { role: 'OL', at: [1.3, 0.6] },
+      RT: { role: 'OL', at: [2.6, 0.6] },
+      QB: { role: 'QB', at: [0, 1.3] },
+      H:  { role: 'RB', at: [0, 4.2] },
+      RB: { role: 'RB', at: [0, 6.8] },
+      TE: { role: 'TE', at: [4.2, 1.2] },
+      X:  { role: 'WR', at: [-18, 1.2] },
+      Z:  { role: 'WR', at: [16, 1.8] },
+    },
+  },
+  // QB under center, one back, slot receiver
+  singleback: {
+    name: 'SINGLEBACK',
+    players: {
+      LT: { role: 'OL', at: [-2.6, 0.6] },
+      LG: { role: 'OL', at: [-1.3, 0.6] },
+      C:  { role: 'OL', at: [0, 0.6] },
+      RG: { role: 'OL', at: [1.3, 0.6] },
+      RT: { role: 'OL', at: [2.6, 0.6] },
+      QB: { role: 'QB', at: [0, 1.3] },
+      RB: { role: 'RB', at: [0, 6.3] },
+      TE: { role: 'TE', at: [4.2, 1.2] },
+      X:  { role: 'WR', at: [-19, 1.2] },
+      H:  { role: 'WR', at: [-10, 1.8] },
+      Z:  { role: 'WR', at: [17, 1.8] },
+    },
+  },
+  // shotgun, three receivers to the near side
+  trips: {
+    name: 'SHOTGUN TRIPS',
+    players: {
+      LT: { role: 'OL', at: [-2.6, 0.6] },
+      LG: { role: 'OL', at: [-1.3, 0.6] },
+      C:  { role: 'OL', at: [0, 0.6] },
+      RG: { role: 'OL', at: [1.3, 0.6] },
+      RT: { role: 'OL', at: [2.6, 0.6] },
+      QB: { role: 'QB', at: [0, 5] },
+      RB: { role: 'RB', at: [-1.8, 5.3] },
+      TE: { role: 'TE', at: [-4.2, 1.2] },
+      X:  { role: 'WR', at: [-19, 1.2] },
+      H:  { role: 'WR', at: [9, 1.8] },
+      Z:  { role: 'WR', at: [18, 1.2] },
+    },
+  },
+  // punter (QB slot) deep, two personal protectors, gunners split wide
+  punt: {
+    name: 'PUNT',
+    players: {
+      LT: { role: 'OL', at: [-2.6, 0.6] },
+      LG: { role: 'OL', at: [-1.3, 0.6] },
+      C:  { role: 'OL', at: [0, 0.6] },
+      RG: { role: 'OL', at: [1.3, 0.6] },
+      RT: { role: 'OL', at: [2.6, 0.6] },
+      QB: { role: 'QB', at: [0, 13] },
+      RB: { role: 'RB', at: [-1.5, 6] },
+      H:  { role: 'RB', at: [1.5, 6] },
+      TE: { role: 'TE', at: [4.2, 0.9] },
+      X:  { role: 'WR', at: [-20, 1.2] },
+      Z:  { role: 'WR', at: [20, 1.2] },
+    },
+  },
+  // kicker (QB slot) 7 yards back, tight wings
+  fieldGoal: {
+    name: 'FIELD GOAL',
+    players: {
+      LT: { role: 'OL', at: [-2.6, 0.6] },
+      LG: { role: 'OL', at: [-1.3, 0.6] },
+      C:  { role: 'OL', at: [0, 0.6] },
+      RG: { role: 'OL', at: [1.3, 0.6] },
+      RT: { role: 'OL', at: [2.6, 0.6] },
+      QB: { role: 'QB', at: [0, 7] },
+      RB: { role: 'RB', at: [-0.8, 6.2] },
+      H:  { role: 'TE', at: [-4.2, 1.2] },
+      TE: { role: 'TE', at: [4.2, 1.2] },
+      X:  { role: 'WR', at: [-5.4, 1.8] },
+      Z:  { role: 'WR', at: [5.4, 1.8] },
+    },
+  },
 };
 
 // Defensive alignments can reference an offensive slot ("over") so corners

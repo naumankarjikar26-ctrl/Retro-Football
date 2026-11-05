@@ -123,6 +123,15 @@ export class Field {
 
     ctx.globalAlpha = 1;
 
+    // goalposts at the back of each end zone (seen from above: crossbar
+    // across the end line, uprights 18'6" apart)
+    for (const x of [left, right]) {
+      const half = ydLat(3.08);
+      rect(0xffe14d, x - 1, Math.round(CENTER_Y - half), 3, Math.round(half * 2));
+      rect(0xffe14d, x - 3, Math.round(CENTER_Y - half) - 2, 7, 3);
+      rect(0xffe14d, x - 3, Math.round(CENTER_Y + half) - 1, 7, 3);
+    }
+
     // goal-line pylons
     for (const x of [left, X(0), X(100), right]) {
       rect(PAL.orange, x - 1, top - 2, 3, 3);

@@ -77,7 +77,7 @@ Then open <http://localhost:8080>.
 
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
-| Call a play | `1`-`7` or click a card, `Q` = Quick Pick | Tap a card |
+| Call a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, `Q` = Quick Pick | Tap a tab, then a card |
 | Audible (once per play, at the line) | `A` or the AUDIBLE button | Tap AUDIBLE |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
@@ -125,25 +125,37 @@ result: CATCH!, DROPPED, INCOMPLETE, BROKEN UP or INTERCEPTED.
 
 ## Play calling (Stage 2)
 
-Before every snap, a play-call screen shows a card for each play, with its
-name, type and a mini route diagram:
+Before every snap, the play-call screen shows tabs for each category, with a
+card per play: its name, type and a mini route diagram. Choose with the
+number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
+**QUICK PICK** (`Q`) calls a random play from any tab except kicks.
 
-| # | Play | Type | Audible to |
-| --- | --- | --- | --- |
-| 1 | Spread Post | Pass | Inside Zone |
-| 2 | Four Verts | Pass | Inside Zone |
-| 3 | Quick Slants | Pass (quick) | Inside Zone |
-| 4 | Curl Flat | Pass | Outside Toss |
-| 5 | RB Screen | Screen | Inside Zone |
-| 6 | Inside Zone | Run (handoff) | Quick Slants |
-| 7 | Outside Toss | Run (pitch) | Quick Slants |
+| Tab | Plays |
+| --- | --- |
+| Run (8) | Inside Zone, Outside Toss, Power, HB Dive, Counter, Stretch, Sweep, HB Draw |
+| Short (8) | Quick Slants, Curl Flat, Quick Outs, Stick, Drive, Hitches, Mesh, RB Screen |
+| Long (8) | Four Verts, Spread Post, Deep Posts, Corners, Fades, Comebacks, Deep Outs, Post Wheel |
+| Play action (8) | PA Post, PA Deep Cross, PA Flood, PA Seam, PA Go, PA Slant, PA Corner, PA TE Leak |
+| Kick | Punt, Field Goal |
 
-**QUICK PICK** calls a random play. At the line you get **one audible** per
-play: passes switch to a run, and runs switch to a quick pass.
+- **Formations:** shotgun spread, shotgun trips, I-form, singleback, punt
+  and field goal.
+- **Under center:** in the I-form and singleback, the QB takes a 5-step drop.
+- **Audible:** at the line you get one per play. Passes switch to a run, and
+  runs switch to a quick pass.
+- **Runs:** the QB hands off or pitches automatically, receivers block, and
+  you control the runner after the handoff.
+- **Play action:** the QB fakes the handoff, and the linebackers bite on the
+  fake for a moment (`paBiteSec` in `src/config/catching.js`), opening
+  space behind them.
+- **Punts:** go 36-50 yards downfield.
+- **Field goals:** the kick distance is the line of scrimmage plus 17 yards,
+  and longer kicks are less likely to be good.
+- **No possession change yet:** punts and field goals both lead to a new
+  drive at your own 25.
 
-On runs, the QB hands off (or pitches) automatically, the receivers block, and
-you control the runner after the handoff. Plays are defined in
-`src/plays/playbook.js`.
+Plays live in `src/plays/playbook.js`, formations in `src/plays/formations.js`
+and routes in `src/plays/routes.js`.
 
 ## Stages
 

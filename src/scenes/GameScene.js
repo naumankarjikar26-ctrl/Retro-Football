@@ -87,7 +87,7 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.centerOn(yardToX(this.gs.ballOn) + yd(5), latToY(this.gs.ballLat));
     }
     bus.emit(EV.STATE, this.gs);
-    bus.emit(EV.HINT, 'CALL A PLAY  (1-7, Q = QUICK PICK)');
+    bus.emit(EV.HINT, 'CALL A PLAY: 1-8, ARROWS = TABS, Q = QUICK PICK');
     this.scene.launch('PlayCall', { onPick: (def) => this.startPlay(def, { first }) });
     this.scene.bringToTop('PlayCall');
   }
@@ -113,7 +113,12 @@ export class GameScene extends Phaser.Scene {
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
     bus.emit(EV.PLAY_CALLED, def);
-    bus.emit(EV.HINT, def.type === 'run' ? 'PRESS / SPACE TO SNAP  -  A = AUDIBLE' : 'PULL BACK: THROW  -  TAP RB: RUN  -  A: AUDIBLE');
+    const hints = {
+      run: 'PRESS / SPACE TO SNAP  -  A: AUDIBLE',
+      punt: 'PRESS / SPACE TO SNAP AND PUNT',
+      fg: 'PRESS / SPACE TO SNAP AND KICK',
+    };
+    bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  A: AUDIBLE');
   }
 
   /** One audible per play, at the line: pass -> run, run -> quick pass. */
@@ -162,7 +167,7 @@ export class GameScene extends Phaser.Scene {
     // one motion: pressing snaps the ball AND starts the pull-back
     if (ph === 'presnap') this.play.snap();
     // anywhere on screen starts the pull; it is measured from this press point
-    if (!this.play.qbScrambling && this.play.def.type !== 'run') {
+    if (!this.play.qbScrambling && this.play.isPassPlay) {
       this.aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y, id: p.id };
     }
   }
@@ -355,7 +360,10 @@ export class GameScene extends Phaser.Scene {
   drawAim() {
     const g = this.aimGfx;
     g.clear();
-    if (this.play.phase === 'air' && this.play.throwTarget) { this.drawLanding(g, this.play.throwTarget, true); return; }
+    if (this.play.phase === 'air' && this.play.throwTarget) {
+      if (!this.play.isKick) this.drawLanding(g, this.play.throwTarget, true);
+      return;
+    }
     const target = this.aimTarget() || this.pendingThrow;
     if (!target || this.play.qb.state === 'throwing') return;
     const q = this.play.qb;

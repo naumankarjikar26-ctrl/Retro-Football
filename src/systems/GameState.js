@@ -54,6 +54,16 @@ export class GameState {
       this.newDrive(25);
       return { headline: 'TOUCHDOWN!', detail: `+${Math.round(100 - start)} YARDS` };
     }
+    if (r.type === 'fg') {
+      if (r.good) this.score.home += 3;
+      this.newDrive(25); // the defense takes over (not playable yet): next drive
+      return { headline: r.good ? 'FIELD GOAL IS GOOD!' : 'NO GOOD', detail: `${r.dist} YARDS` };
+    }
+    if (r.type === 'punt') {
+      const net = Math.round(r.endYard - start);
+      this.newDrive(25);
+      return { headline: r.endYard >= 100 ? 'TOUCHBACK' : `PUNT ${net} YDS`, detail: 'NEW DRIVE AT OWN 25' };
+    }
     if (r.type === 'interception') {
       // possession changes arrive with the defense stage; for now a new drive
       this.newDrive(25);

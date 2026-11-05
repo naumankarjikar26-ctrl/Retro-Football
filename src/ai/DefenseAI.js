@@ -32,6 +32,12 @@ export function updateDefense(play, dt) {
       }
     }
 
+    // play action: linebackers bite on the fake for a moment
+    if (play.def.type === 'pa' && d.role === 'LB' && play.fakeRunner && time - play.snapTime < CATCHING.paBiteSec) {
+      pursue(d, play.fakeRunner, slow);
+      continue;
+    }
+
     // QB has the ball (or the snap is on its way)
     const qb = play.qb;
     switch (d.job.type) {

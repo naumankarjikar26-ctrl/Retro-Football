@@ -24,6 +24,25 @@ export const ROUTES = {
   // handoff, then through the line / around the edge
   runInside: { points: [[0, 0], [-1.6, 0.3], [-2.2, 3], [-2.2, 14]], curve: true },
   runToss:   { points: [[0, 0], [2, 0.2], [6, 3], [7, 14]], curve: true },
+  // short game
+  quickOut:  { points: [[0, 0], [0, 4], [9, 4]] },
+  stick:     { points: [[0, 0], [0, 5], [-0.5, 6]], settle: true },
+  drag:      { points: [[0, 0], [0, 2], [-24, 4]] },
+  whip:      { points: [[0, 0], [0, 4], [-2, 5], [6, 5]] },
+  // deep game
+  fade:      { points: [[0, 0], [1, 10], [3, 34]], curve: true },
+  deepPost:  { points: [[0, 0], [0, 14], [-10, 34]] },
+  deepCorner:{ points: [[0, 0], [0, 14], [9, 28]] },
+  deepOut:   { points: [[0, 0], [0, 15], [12, 15]] },
+  comeback:  { points: [[0, 0], [0, 15], [2, 12]], settle: true },
+  deepCross: { points: [[0, 0], [0, 10], [-26, 20]] },
+  // more run paths (I-form / singleback tailback starts straight behind the QB)
+  runDive:    { points: [[0, 0], [0.3, 5], [0.6, 16]], curve: true },
+  runPower:   { points: [[0, 0], [0.6, 5], [1.6, 7], [1.8, 18]], curve: true },
+  runCounter: { points: [[0, 0], [1.2, 1.5], [0, 5], [-2.4, 8], [-2.8, 18]], curve: true },
+  runStretch: { points: [[0, 0], [2.5, 4], [6, 7], [7, 18]], curve: true },
+  runSweep:   { points: [[0, 0], [-3, 3], [-8, 6], [-9, 18]], curve: true },
+  runDraw:    { points: [[0, 0], [-1.6, 0.3], [-1.6, 14]], curve: true },
   block:  { points: [[0, 0]], settle: true },
 };
 

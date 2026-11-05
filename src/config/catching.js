@@ -34,6 +34,9 @@ export const CATCHING = {
   defenseBreakSpeed: 0.85,  // fraction of top speed when breaking on the ball
   trailSpeedInAir: 0.75,    // a cover man trailing his receiver while the ball is in the air
 
+  // Play action: linebackers chase the fake this long after the snap.
+  paBiteSec: 0.8,
+
   // Deep balls are a little harder to haul in.
   deepThrowYd: 40,
   deepPenalty: 0.08,

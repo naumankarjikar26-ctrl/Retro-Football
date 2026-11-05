@@ -100,14 +100,18 @@ export class PlayController {
       this.ball.holdBy(qb);
       if (this.phase === 'snap') this.phase = 'qb';
     }, 2, CATCH_Z);
-    this.dropbackX = qb.x - yd(TUNING.qbDropback);
+    // under center: a real 5-step drop; shotgun: a short drift
+    const underCenter = this.losX - qb.x < yd(3);
+    this.dropbackX = qb.x - yd(underCenter ? 5 : TUNING.qbDropback);
     bus.emit(EV.SNAP);
-    bus.emit(EV.HINT, 'PULL BACK + RELEASE TO THROW');
+    if (this.isPassPlay) bus.emit(EV.HINT, 'PULL BACK + RELEASE TO THROW  -  TAP RB: RUN');
+    else if (this.isKick) bus.emit(EV.HINT, this.def.type === 'punt' ? 'PUNTING...' : 'KICKING...');
+    else bus.emit(EV.HINT, 'HANDOFF...');
   }
 
   canThrow() {
     return this.phase === 'qb' && this.ball.carrier === this.qb && this.qb.state !== 'throwing'
-      && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3) && this.def.type !== 'run';
+      && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3) && this.isPassPlay;
   }
 
   /**
@@ -170,6 +174,7 @@ export class PlayController {
 
     if (this.phase === 'qb' && this.wantRB) this.giveToRB();
     if (this.phase === 'qb' && this.def.type === 'run') this.checkHandoff();
+    if (this.phase === 'qb' && this.isKick && !this.kicked && this.time - this.snapTime > 0.55) this.kick();
     if (this.phase === 'qb' || this.phase === 'run') this.checkCarrier();
   }
 
@@ -184,7 +189,7 @@ export class PlayController {
     if (p === this.qb && this.phase !== 'run') {
       if (p.state === 'throwing') return;
       // run plays: the QB stays put and hands off; your keys steer the runner after
-      if (this.def.type === 'run') { p.stop(); return; }
+      if (!this.isPassPlay) { p.stop(); return; } // runs / kicks: QB stays put
       if (hasKeys) p.moveDir(input.dx, input.dy, input.aiming ? 0.55 : 1);
       else if (p.x > this.dropbackX + 1) p.moveToward(this.dropbackX, p.y, 0.55);
       else p.stop();
@@ -243,6 +248,51 @@ export class PlayController {
     return best;
   }
 
+  /** Play action: the back carrying out the fake. */
+  get fakeRunner() { return this.def.fake ? this.offenseBySlot[this.def.fake] : null; }
+
+  get isPassPlay() { return ['pass', 'screen', 'pa'].includes(this.def.type); }
+  get isKick() { return this.def.type === 'punt' || this.def.type === 'fg'; }
+
+  /**
+   * Punt / field goal, a moment after the kicker gets the snap.
+   * Punt: 36-50 yards downfield. Field goal: aimed at the posts; the chance
+   * of it being good drops with distance.
+   */
+  kick() {
+    this.kicked = true;
+    const k = this.qb;
+    if (this.ball.carrier !== k || k.state === 'down') return;
+    const goalX = yardToX(110);
+    if (this.def.type === 'punt') {
+      const yds = Phaser.Math.Between(36, 50);
+      const tx = Math.min(yardToX(this.gs.ballOn + yds), yardToX(109));
+      const ty = latToY(Phaser.Math.FloatBetween(-8, 8));
+      k.throwMotion(1, 0, () => {
+        this.phase = 'air';
+        this.throwTarget = { x: tx, y: ty }; // coverage team runs to where it lands
+        this.throwTime = this.time;
+        this.ball.launch(k.x, k.y, tx, ty, 3.2, 150, () => {
+          this.ball.placeAt(tx, ty);
+          this.end({ type: 'punt', endYard: xToYard(tx) });
+        }, 14, 0, 'ball-tumble');
+      });
+    } else {
+      const dist = Math.round(100 - this.gs.ballOn + 17);
+      const good = Math.random() < Phaser.Math.Clamp(1 - (dist - 22) * 0.017, 0.15, 0.99);
+      const miss = good ? Phaser.Math.FloatBetween(-1.5, 1.5) : Phaser.Math.RND.pick([-1, 1]) * Phaser.Math.FloatBetween(4.5, 8);
+      const ty = latToY(miss);
+      k.throwMotion(1, 0, () => {
+        this.phase = 'air';
+        this.throwTarget = { x: goalX, y: ty };
+        this.throwTime = this.time;
+        this.ball.launch(k.x, k.y, goalX, ty, 0.9 + dist * 0.02, 110, () => {
+          this.end({ type: 'fg', good, dist });
+        }, 6, 60, 'ball-tumble');
+      });
+    }
+  }
+
   /** The ball carrier on a run play (before he has the ball). */
   get runner() { return this.def.runner ? this.offenseBySlot[this.def.runner] : null; }
 
@@ -251,6 +301,7 @@ export class PlayController {
    * Before the snap this is queued and happens as soon as the QB has the ball.
    */
   giveToRB() {
+    if (this.isKick) return false;
     const rb = this.offenseBySlot.RB;
     if (!rb || rb.state === 'down' || this.handingOff) return false;
     if (this.phase === 'presnap') { this.snap(); this.wantRB = true; return true; }
