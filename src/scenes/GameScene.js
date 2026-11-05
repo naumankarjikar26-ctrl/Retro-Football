@@ -270,7 +270,7 @@ export class GameScene extends Phaser.Scene {
   presnapFocus() {
     const p = this.play;
     // zoomed in: centre on the ball, a few yards ahead of the line
-    return { x: p.losX + yd(4), y: p.ballY - 10 };
+    return { x: p.losX + yd(7), y: p.ballY - 10 };
   }
 
   cameraFocus() {

@@ -20,9 +20,9 @@ export const BAR_H = 20;
 export const HINT_H = 19;
 export const FIELD_VIEW_H = VIEW_H - BAR_H - HINT_H; // 161
 
-export const PX_PER_YARD = 34;              // ~19 yards visible across the 640px view: a big field around the players
+export const PX_PER_YARD = 26;              // ~25 yards visible across the 640px view
 export const FIELD_WIDTH_YD = 60;                    // wider than a real field (53.3 yd) to give out routes room
-export const FIELD_PX_H = 612;   // sideline to sideline on screen: a sideways yard is ~0.3 of a downfield yard, like Retro Bowl
+export const FIELD_PX_H = 468;   // sideline to sideline on screen: a sideways yard is ~0.3 of a downfield yard, like Retro Bowl
 export const LAT_SCALE = FIELD_PX_H / (FIELD_WIDTH_YD * PX_PER_YARD); // 0.3
 export const yd = (yards) => yards * PX_PER_YARD;                // downfield yards -> px (x)
 export const ydLat = (yards) => yards * PX_PER_YARD * LAT_SCALE; // lateral yards -> px (y)
