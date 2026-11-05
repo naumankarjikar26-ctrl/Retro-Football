@@ -105,7 +105,8 @@ below him) cuts him about 3.5 yards over (`cutYards` in
 ## Catching
 
 As soon as you release a throw, the receiver who can get closest to the
-landing spot (within 20 yards) leaves his route and tracks the ball. If the
+landing spot in time leaves his route and tracks the ball, deep balls
+included. If the
 pass is underthrown, he stops and comes back for it. While the ball is in the air, a
 faint circle on the ground shows the sure-catch range. When the ball comes
 down, the closest receiver's distance to the spot sets the catch chance:

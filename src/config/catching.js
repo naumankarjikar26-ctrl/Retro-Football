@@ -3,9 +3,10 @@
 
 export const CATCHING = {
   // When the ball is thrown, the receiver who can get closest to the landing
-  // spot (within this range) leaves his route and tracks the ball - including
-  // coming back for an underthrown ball.
-  trackRadiusYd: 20,
+  // spot leaves his route and tracks the ball (also coming back on an
+  // underthrow). He's picked if, running flat out until the ball lands, he
+  // can end up within this many yards of the spot - so deep balls work too.
+  trackRadiusYd: 10,
   trackAccelScale: 2.2,     // how much sharper a tracking receiver can stop / turn
 
   // Catch chance by the closest receiver's distance to the landing spot.

@@ -235,8 +235,9 @@ export class PlayController {
     for (const r of this.receivers) {
       if (r.state === 'down' || r.state === 'tackled') continue;
       const d = gdist(r, spot);
-      if (d > yd(CATCHING.trackRadiusYd)) continue;
-      const score = Math.max(0, d - yd(r.maxSpeed) * flightTime) + d * 0.05; // tie-break: nearer
+      const shortBy = Math.max(0, d - yd(r.maxSpeed) * flightTime); // how far off he'd still be
+      if (shortBy > yd(CATCHING.trackRadiusYd)) continue;
+      const score = shortBy + d * 0.05; // tie-break: nearer
       if (score < bestScore) { bestScore = score; best = r; }
     }
     return best;
