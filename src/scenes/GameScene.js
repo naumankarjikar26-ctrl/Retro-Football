@@ -6,7 +6,7 @@
 // higher. A tiny pull cancels.
 
 import {
-  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, yd, groundLen, yardToX, latToY,
+  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, yd, ydLat, groundLen, yardToX, latToY,
 } from '../config/constants.js';
 import { Field } from '../field/Field.js';
 import { CameraController } from '../camera/CameraController.js';
@@ -16,6 +16,8 @@ import { playById } from '../plays/playbook.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 import { nearest } from '../ai/OffenseAI.js';
+import { CATCHING } from '../config/catching.js';
+import { PixelText } from '../gfx/PixelFont.js';
 
 const ROUTE_COLOR = 0xf4f4f4; // white routes
 const ROUTE_AIMED = 0x73eff7; // light blue: the receiver you're aiming at
@@ -50,9 +52,17 @@ export class GameScene extends Phaser.Scene {
 
     this.scene.launch('HUD');
     bus.on(EV.PLAY_END, this.onPlayEnd, this);
+    bus.on(EV.POPUP, this.popup, this);
     this.events.once('shutdown', () => bus.removeAllListeners());
 
     this.newPlay(true);
+  }
+
+  /** Short text that floats up over the play: CATCH!, DROPPED, ... */
+  popup({ text, x, y, color }) {
+    const col = color === 'good' ? PAL.lime : color === 'bad' ? PAL.orange : PAL.white;
+    const t = new PixelText(this, Math.round(x), Math.round(y) - 46, text, col, 2).setAlign(0.5).setDepth(2600);
+    this.tweens.add({ targets: t, y: t.y - 16, alpha: 0, delay: 600, duration: 500, onComplete: () => t.destroy() });
   }
 
   /** Small white impact flash at a tackle (a quick expanding pixel burst). */
@@ -354,6 +364,13 @@ export class GameScene extends Phaser.Scene {
   drawLanding(g, target, pulse) {
     const tx = Math.round(target.x);
     const ty = Math.round(target.y);
+    if (pulse) {
+      // faint catch circle: the sure-catch range, so you can see if he'll get there
+      const rx = yd(CATCHING.tiers[0].maxYd);
+      const ry = ydLat(CATCHING.tiers[0].maxYd);
+      g.fillStyle(PAL.white, 0.12).fillEllipse(tx, ty, rx * 2, ry * 2);
+      g.lineStyle(1, PAL.white, 0.45).strokeEllipse(tx, ty, rx * 2, ry * 2);
+    }
     const k = pulse ? 1 + 0.25 * Math.sin(this.time.now / 90) : 1;
     for (const [c, o, rad] of [[PAL.ink, 1, 7], [PAL.white, 0, 7], [PAL.orange, 0, 3]]) {
       g.fillStyle(c, 1);

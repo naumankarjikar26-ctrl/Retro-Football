@@ -54,6 +54,11 @@ export class GameState {
       this.newDrive(25);
       return { headline: 'TOUCHDOWN!', detail: `+${Math.round(100 - start)} YARDS` };
     }
+    if (r.type === 'interception') {
+      // possession changes arrive with the defense stage; for now a new drive
+      this.newDrive(25);
+      return { headline: 'INTERCEPTED', detail: 'NEW DRIVE AT OWN 25' };
+    }
     if (r.type === 'safety') {
       this.score.away += 2;
       this.newDrive(25);

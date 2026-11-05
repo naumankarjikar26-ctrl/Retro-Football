@@ -20,6 +20,7 @@ import { Ball, CATCH_Z } from '../entities/Ball.js';
 import { updateOffense, nearest } from '../ai/OffenseAI.js';
 import { updateDefense } from '../ai/DefenseAI.js';
 import { bus, EV } from './events.js';
+import { CATCHING } from '../config/catching.js';
 
 export class PlayController {
   constructor(scene, gameState, playDef) {
@@ -134,7 +135,8 @@ export class PlayController {
       this.throwTime = this.time;
       this.throwTarget = { x: tx, y: ty };
       // the receiver closest to the landing spot goes up for it
-      this.intended = nearest({ x: tx, y: ty }, this.receivers.filter((r) => r.state !== 'down'), yd(25));
+      this.intended = nearest({ x: tx, y: ty }, this.receivers.filter((r) => r.state !== 'down'), yd(CATCHING.trackRadiusYd));
+      this.throwDist = dist;
       this.controlled = null;
       this.throwFrom = { x: q.x, y: q.y };
       this.ball.launch(q.x, q.y, tx, ty, duration, peak, () => this.resolveCatch());
@@ -250,35 +252,59 @@ export class PlayController {
     bus.emit(EV.HINT, 'PRESS UP / DOWN (OR TAP ABOVE / BELOW) TO CUT');
   }
 
+  /** Ball comes down: catch / drop / break-up / interception (numbers in config/catching.js). */
   resolveCatch() {
     const t = this.throwTarget;
     const inBounds = t.y >= FIELD_TOP && t.y <= FIELD_BOTTOM && t.x >= yardToX(-10) && t.x <= yardToX(110);
-    if (!inBounds) return this.incomplete('OUT OF BOUNDS');
+    if (!inBounds) return this.incomplete('INCOMPLETE', 'OUT OF BOUNDS');
 
-    const radius = yd(TUNING.catchRadiusYd);
-    const dist = (p) => gdist(p, t);
-    const r = nearest(t, this.receivers.filter((p) => p.state !== 'down'), radius);
-    const dd = nearest(t, this.defense.filter((p) => p.state !== 'down'), radius * 0.8);
+    const C = CATCHING;
+    const alive = (list) => list.filter((p) => p.state !== 'down' && p.state !== 'tackled');
+    const dYd = (p) => toYards(gdist(p, t));
+    const lastTier = C.tiers[C.tiers.length - 1].maxYd;
+    const r = nearest(t, alive(this.receivers), yd(lastTier));
+    const dd = nearest(t, alive(this.defense), yd(C.defenderReachYd));
 
-    if (dd && (!r || dist(dd) < dist(r) * 0.8)) {
-      // Stage 5+: interceptions. For now a defender in front knocks it away.
-      if (!r || Math.random() < 0.7) return this.incomplete('BROKEN UP');
+    // a defender beat every receiver to the ball
+    if (dd && (!r || dYd(dd) < dYd(r))) {
+      if (Math.random() < C.interceptChance) return this.intercept(dd);
+      return this.incomplete('BROKEN UP', 'BROKEN UP', dd);
     }
-    if (!r) return this.incomplete('NO RECEIVER THERE');
+    if (!r) return this.incomplete('INCOMPLETE', 'NO RECEIVER THERE');
 
-    const contested = dd && gdist(dd, r) < yd(1.3);
-    const hands = r.ratings.hands ?? 0.85;
-    const chance = contested ? hands * 0.7 : Math.min(0.98, hands + 0.06);
-    if (Math.random() > chance) return this.incomplete('DROPPED');
+    const dist = dYd(r);
+    const tier = C.tiers.find((tr) => dist <= tr.maxYd);
+    let chance = tier.chance;
+    const contested = dd && toYards(gdist(dd, r)) <= C.contestedYd;
+    if (contested) {
+      if (Math.random() < C.contestedKnockAway) return this.incomplete('BROKEN UP', 'BROKEN UP', r);
+      chance -= C.contestedPenalty;
+    }
+    if (this.throwDist >= C.deepThrowYd) chance -= C.deepPenalty;
+    if (tier.dive) r.dive(t);
+    this.lastCatch = { distYd: +dist.toFixed(2), chance: +chance.toFixed(2), contested: !!contested, intended: this.intended === r };
+    if (Math.random() > chance) return this.incomplete('DROPPED', 'DROPPED', r);
 
     this.ball.holdBy(r);
     bus.emit(EV.CATCH, { player: r });
+    bus.emit(EV.POPUP, { text: 'CATCH!', x: r.x, y: r.y, color: 'good' });
     this.startRun(r);
     if (r.x >= yardToX(100)) this.end({ type: 'touchdown' });
     return true;
   }
 
-  incomplete(reason) {
+  /** Defender picks it off. No possession change yet: it ends the drive. */
+  intercept(d) {
+    this.ball.holdBy(d);
+    bus.emit(EV.POPUP, { text: 'INTERCEPTED', x: d.x, y: d.y, color: 'bad' });
+    this.end({ type: 'interception' });
+    return false;
+  }
+
+
+  incomplete(popup, reason = popup, at = null) {
+    const where = at || this.ball;
+    bus.emit(EV.POPUP, { text: popup, x: where.x ?? where.gx, y: where.y ?? where.gy, color: 'bad' });
     // the ball skips along the turf, tumbling end over end
     const b = this.ball;
     const from = this.throwFrom || { x: b.gx, y: b.gy + 1 };

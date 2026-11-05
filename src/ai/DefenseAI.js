@@ -4,6 +4,7 @@
 // Field is horizontal: the offense attacks to the RIGHT (+x).
 
 import { yd, ydLat, gdist, latToY } from '../config/constants.js';
+import { CATCHING } from '../config/catching.js';
 
 const REACT = 4.5; // how quickly a cover man's aim point catches up (1/s)
 
@@ -21,9 +22,12 @@ export function updateDefense(play, dt) {
     }
 
     if (phase === 'air') {
+      // only defenders already near the landing spot break on the ball - after a short read, and not quite at full speed
       const land = play.throwTarget;
-      if (time - play.throwTime > 0.25 && gdist(d, land) < yd(16) && d.job.type !== 'rush') {
-        d.moveToward(land.x, land.y, slow);
+      // (a cover man further away keeps trailing his receiver instead)
+      const near = gdist(d, land) < yd(CATCHING.breakOnBallYd);
+      if (time - play.throwTime > CATCHING.defenseReactSec && near && d.job.type !== 'rush') {
+        d.moveToward(land.x, land.y, CATCHING.defenseBreakSpeed * slow);
         continue;
       }
     }
@@ -36,7 +40,9 @@ export function updateDefense(play, dt) {
         else pursue(d, qb, slow);
         break;
       case 'man':
-        coverMan(d, play.offenseBySlot[d.job.target], dt, slow);
+        // while the ball is in the air a trailing cover man is reading the ball,
+        // not running flat out, so an open receiver stays open
+        coverMan(d, play.offenseBySlot[d.job.target], dt, slow * (phase === 'air' ? CATCHING.trailSpeedInAir : 1));
         break;
       case 'deep':
       default:

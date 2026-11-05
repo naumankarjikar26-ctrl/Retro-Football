@@ -191,6 +191,14 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.scene.tweens.add({ targets: this.shadow, scaleX: 1.7 * PLAYER_SCALE, scaleY: 0.8 * PLAYER_SCALE, alpha: 0.24, duration, ease: 'Quad.In' });
   }
 
+  /** Diving catch: lay out toward the ball, then pop back up. */
+  dive(target) {
+    const side = target.x >= this.x ? 1 : -1;
+    this.scene.tweens.add({ targets: this, x: target.x, y: target.y, duration: 140, ease: 'Quad.Out' });
+    this.scene.tweens.add({ targets: this, angle: 70 * side, duration: 140, yoyo: true, hold: 200, ease: 'Quad.Out',
+      onComplete: () => { this.angle = 0; } });
+  }
+
   /** Stand back up after a whiff. */
   getUp(duration = 220) {
     this.scene.tweens.add({ targets: this, angle: 0, shadowDX: 0, duration, ease: 'Quad.Out' });

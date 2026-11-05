@@ -101,6 +101,22 @@ straight downfield on his own. Each press of up or down (or a tap above or
 below him) cuts him about 3.5 yards over (`cutYards` in
 `src/config/constants.js`).
 
+## Catching
+
+When the ball is thrown, the receiver nearest the landing spot (within 8
+yards) leaves his route and runs to the spot. While the ball is in the air, a
+faint circle on the ground shows the sure-catch range. When the ball comes
+down, the closest receiver's distance to the spot sets the catch chance:
+
+- **Within 1.5 yards:** 90%.
+- **1.5 to 3 yards:** 65%, with a diving catch.
+- **3 to 4 yards:** 30%, with a diving catch.
+- **Beyond 4 yards:** incomplete.
+
+Contested catches, interceptions, deep-throw penalties and how the defense
+reacts are all tunable in `src/config/catching.js`. A short pop-up shows the
+result: CATCH!, DROPPED, INCOMPLETE, BROKEN UP or INTERCEPTED.
+
 ## Play calling (Stage 2)
 
 Before every snap, a play-call screen shows a card for each play, with its
