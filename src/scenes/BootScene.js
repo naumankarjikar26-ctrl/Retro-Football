@@ -6,7 +6,7 @@ import {
   DIR_ORDER, PLAYER_FRAME, PLAYER_ANIMS, PLAYER_KEY_COLORS, SHEET_COLOR_MAP,
   FIELD_ASSETS, FOOTBALL_SPIRAL, FOOTBALL_TUMBLE,
 } from '../config/assets.js';
-import { TEAMS } from '../config/constants.js';
+import { TEAMS, SKIN_TONES } from '../config/teams.js';
 import { buildPlaceholderPlayerSheets, buildPlaceholderMisc, paletteSwap } from '../gfx/PlaceholderArt.js';
 import { registerPixelFont } from '../gfx/PixelFont.js';
 import { stylizeSheet, buildSmallFootball } from '../gfx/SpriteStyle.js';
@@ -79,19 +79,23 @@ export class BootScene extends Phaser.Scene {
         placeholders ??= buildPlaceholderPlayerSheets();
         source = placeholders[anim];
       }
+      // one set of sheets per team x skin tone (skin key: "home-s2" etc.)
       for (const team of Object.keys(TEAMS)) {
-        const key = `player-${team}-${anim}`;
-        let sheet = paletteSwap(source, real ? this.sheetMap(team) : this.keyMap(team));
-        if (real) sheet = stylizeSheet(sheet, { w: PLAYER_FRAME.width, h: PLAYER_FRAME.height }, TEAMS[team]);
-        this.textures.addCanvas(key, sheet);
-        this.sliceSheet(key);
-        this.makeAnims(team, anim, key);
+        SKIN_TONES.forEach((tone, i) => {
+          const skin = `${team}-s${i}`;
+          const key = `player-${skin}-${anim}`;
+          let sheet = paletteSwap(source, real ? this.sheetMap(team, tone) : this.keyMap(team));
+          if (real) sheet = stylizeSheet(sheet, { w: PLAYER_FRAME.width, h: PLAYER_FRAME.height }, TEAMS[team]);
+          this.textures.addCanvas(key, sheet);
+          this.sliceSheet(key);
+          this.makeAnims(skin, anim, key);
+        });
       }
     }
   }
 
-  sheetMap(team) {
-    const t = TEAMS[team];
+  sheetMap(team, tone) {
+    const t = { ...TEAMS[team], skin: tone[0], skinDark: tone[1] };
     const map = {};
     for (const [from, slot] of Object.entries(SHEET_COLOR_MAP)) map[from] = t[slot];
     return map;

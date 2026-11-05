@@ -50,7 +50,7 @@ export class PlayController {
     const clampY = (y) => Phaser.Math.Clamp(y, FIELD_TOP + ydLat(3), FIELD_BOTTOM - ydLat(3));
     const off = OFFENSE_FORMATIONS[this.def.formation].players;
     for (const [slot, s] of Object.entries(off)) {
-      const p = new Player(this.scene, this.losX - yd(s.at[1]), clampY(this.ballY + ydLat(s.at[0])), 'home', s.role, slot);
+      const p = new Player(this.scene, this.losX - yd(s.at[1]), clampY(this.ballY + ydLat(s.at[0])), 'home', s.role, slot, this.gs.skinToneFor('home', slot));
       p.ai.homeX = p.x;
       p.ai.homeY = p.y;
       this.offense.push(p);
@@ -59,7 +59,7 @@ export class PlayController {
     const dfn = DEFENSE_FORMATIONS[this.def.defense].players;
     for (const [slot, s] of Object.entries(dfn)) {
       const baseY = s.over ? this.offenseBySlot[s.over].y : this.ballY;
-      const d = new Player(this.scene, this.losX + yd(s.at[1]), clampY(baseY + ydLat(s.at[0])), 'away', s.role, slot);
+      const d = new Player(this.scene, this.losX + yd(s.at[1]), clampY(baseY + ydLat(s.at[0])), 'away', s.role, slot, this.gs.skinToneFor('away', slot));
       d.job = s.job;
       this.defense.push(d);
       this.defenseBySlot[slot] = d;

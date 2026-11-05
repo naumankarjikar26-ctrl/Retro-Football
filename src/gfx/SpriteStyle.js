@@ -47,7 +47,7 @@ export function stylizeSheet(canvas, frame, team) {
           const c = colorAt(x, y);
           if (c === -1) continue;
           if (legs.has(c)) {
-            put(x, y, PAL.ink);
+            put(x, y, team.cleats ?? PAL.ink);
             if (y - 1 >= fy && legs.has(colorAt(x, y - 1))) put(x, y - 1, team.socks ?? PAL.white);
           }
           break;

@@ -74,18 +74,8 @@ export const PAL = {
   ball: 0x7a3b1e,
 };
 
-// Each team's uniform: a light and dark shade for jersey, helmet and pants.
-// (trim/stripe are only used by the procedural fallback sprites.)
-export const TEAMS = {
-  home: {
-    name: 'RED', abbr: 'RED', jerseyLight: 0xd8607a, jersey: PAL.red, jerseyDark: PAL.plum, helmet: PAL.orange, helmetDark: PAL.red,
-    pants: PAL.white, pantsDark: PAL.silver, trim: PAL.white, stripe: PAL.white, mask: PAL.dusk, socks: PAL.red,
-  },
-  away: {
-    name: 'BLUE', abbr: 'BLU', jerseyLight: PAL.cyan, jersey: PAL.sky, jerseyDark: PAL.blue, helmet: PAL.navy, helmetDark: PAL.ink,
-    pants: PAL.silver, pantsDark: PAL.slate, trim: PAL.white, stripe: PAL.white, mask: PAL.dusk, socks: PAL.white,
-  },
-};
+// Uniforms and skin tones live in teams.js.
+export { TEAMS } from './teams.js';
 
 // Movement / feel. Speeds are yards per second.
 export const TUNING = {

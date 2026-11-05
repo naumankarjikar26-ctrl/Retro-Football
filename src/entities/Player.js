@@ -8,6 +8,7 @@
 
 import { TUNING, LAT_SCALE, yd, toYards } from '../config/constants.js';
 import { PLAYER_ORIGIN } from '../config/assets.js';
+import { SKIN_TONES } from '../config/teams.js';
 
 const DIRS_BY_OCTANT = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 
@@ -35,8 +36,11 @@ export class Player extends Phaser.GameObjects.Sprite {
    * @param {string} role   QB, RB, WR, TE, OL, DL, LB, CB, S
    * @param {string} slot   unique position id within the formation (e.g. 'X', 'LT', 'CB1')
    */
-  constructor(scene, x, y, team, role, slot) {
-    super(scene, x, y, `player-${team}-idle`, 0);
+  constructor(scene, x, y, team, role, slot, skinTone) {
+    // each player keeps one skin tone all game (passed in, or picked at random)
+    const tone = skinTone ?? Math.floor(Math.random() * SKIN_TONES.length);
+    super(scene, x, y, `player-${team}-s${tone}-idle`, 0);
+    this.skin = `${team}-s${tone}`;
     this.team = team;
     this.role = role;
     this.slot = slot;
@@ -136,7 +140,7 @@ export class Player extends Phaser.GameObjects.Sprite {
   }
 
   playAnim(anim, force = false) {
-    const key = `${this.team}-${anim}-${this.facing}`;
+    const key = `${this.skin}-${anim}-${this.facing}`;
     if (!force && this.anims.currentAnim && this.anims.currentAnim.key === key && this.anims.isPlaying) return;
     // keep the stride going when only the direction changes
     const keepFrame = !force && this.currentAnimName === anim && this.anims.currentFrame;

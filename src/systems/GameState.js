@@ -2,6 +2,7 @@
 // penalty system (Stage 5) can apply yardage/down changes through it too.
 
 import { HASH_OFFSET_YD } from '../config/constants.js';
+import { SKIN_TONES } from '../config/teams.js';
 
 export class GameState {
   constructor() {
@@ -9,6 +10,14 @@ export class GameState {
     this.quarter = 1;
     this.newDrive(25);
     // Stage 5: playClock, challengesLeft, half. Stage 4: hardCountHistory.
+  }
+
+  /** Each player's skin tone is picked once and kept for the whole game (Stage 6: from the roster). */
+  skinToneFor(team, slot) {
+    this.skinTones ??= {};
+    const k = `${team}:${slot}`;
+    this.skinTones[k] ??= Math.floor(Math.random() * SKIN_TONES.length);
+    return this.skinTones[k];
   }
 
   newDrive(yardLine) {

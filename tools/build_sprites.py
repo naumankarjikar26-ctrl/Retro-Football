@@ -3,7 +3,7 @@
 Builds the game's player sheets from the original Lumenlore sheets.
 
 The originals in assets/players/ are NOT modified (they stay as the backup).
-New files are written to assets/players/padded/:
+New files are written to assets/players/padded/ and assets/players/v3/:
 
   Idle.png, Walk.png, Run.png, Right-Hand-Punch.png, Death.png
       the originals with shoulder pads ADDED (only transparent pixels are
@@ -13,6 +13,10 @@ New files are written to assets/players/padded/:
       4 columns x 8 direction rows of 64x64:
         0 = 3-point stance (OL / DL)   1 = 2-point stance (RB / WR / TE)
         2 = athletic crouch (LB / DB)  3 = QB ready crouch
+
+  v3/*.png
+      the padded sheets with each body part on its own key colour (skin on
+      arms and face, facemask bars, jersey hem trim) - shapes unchanged
 
 All colours stay in the template's key palette, so the in-game palette swap
 (team colours), outline, helmet stripe, facemask, socks and cleats still apply
@@ -38,6 +42,12 @@ LIMB_LIGHT = {0xAC3232, 0x306082}
 LIMB_DARK = {0x6E2025, 0x304682}
 LIMBS = LIMB_LIGHT | LIMB_DARK
 PAD_HIGHLIGHT = 0xA8E070  # new key colour -> team "jerseyLight"
+FACE = 0x379FDB
+# extra key colours for the "parts" pass (mapped per team / per skin tone in game)
+SKIN_LIGHT = 0xF0C8A0
+SKIN_DARK = 0xC89070
+MASK = 0x303030
+TRIM = 0xFF8000
 
 # facing direction per row: +1 = right, -1 = left, 0 = toward / away from camera
 FORWARD_X = {'E': 1, 'NE': 1, 'SE': 1, 'W': -1, 'NW': -1, 'SW': -1, 'N': 0, 'S': 0}
@@ -86,7 +96,7 @@ def add_pads(img):
     return img
 
 
-def stance_frame(idle, row, kind):
+def stance_frame(idle, row, kind, arm=(0xAC3232, 0x6E2025)):
     """Builds one 64x64 stance frame from the idle frame of a direction row."""
     src = idle.crop((0, row * F, F, row * F + F))
     out = Image.new('RGBA', (F, F), (0, 0, 0, 0))
@@ -138,10 +148,39 @@ def stance_frame(idle, row, kind):
             y0 = min(ys) + 2
             for y in range(y0, opaque[-1] + 1):
                 if 0 <= ax < F and not out.getpixel((ax, y))[3]:
-                    out.putpixel((ax, y), to_px(0xAC3232 if y < opaque[-1] - 1 else 0x6E2025))
+                    out.putpixel((ax, y), to_px(arm[0] if y < opaque[-1] - 1 else arm[1]))
                 if 0 <= ax + fwd < F and y >= opaque[-1] - 1 and not out.getpixel((ax + fwd, y))[3]:
-                    out.putpixel((ax + fwd, y), to_px(0x6E2025))
+                    out.putpixel((ax + fwd, y), to_px(arm[1]))
     return out
+
+
+def color_parts(img):
+    """
+    Gives each body part its own key colour, keeping every pixel's shape:
+      - arm pixels (limb colours level with the torso) -> skin
+      - face pixels -> skin, with alternate rows as facemask bars
+      - lowest jersey row -> trim (jersey hem)
+    Legs keep the limb colours (-> pants in game).
+    """
+    W, H = img.size
+    for fy in range(0, H, F):
+        for fx in range(0, W, F):
+            torso = frame_rows(img, fx, fy, JERSEY | {PAD_HIGHLIGHT})
+            if not torso:
+                continue  # hit-flash silhouettes etc.
+            t_bottom = max(frame_rows(img, fx, fy, JERSEY))
+            face_rows = frame_rows(img, fx, fy, {FACE})
+            f_top = face_rows[0] if face_rows else 0
+            for y in range(fy, fy + F):
+                for x in range(fx, fx + F):
+                    c = rgb(img.getpixel((x, y)))
+                    if c in LIMBS and y <= t_bottom + 1:
+                        img.putpixel((x, y), to_px(SKIN_DARK if c in LIMB_DARK else SKIN_LIGHT))
+                    elif c == FACE:
+                        img.putpixel((x, y), to_px(MASK if (y - f_top) % 2 == 1 else SKIN_LIGHT))
+                    elif c in JERSEY and y == t_bottom:
+                        img.putpixel((x, y), to_px(TRIM))
+    return img
 
 
 def main():
@@ -159,6 +198,22 @@ def main():
             sheet.paste(stance_frame(idle, row, kind), (col * F, row * F))
     add_pads(sheet).save(OUT / 'Stance.png')
     print('wrote', OUT / 'Stance.png')
+
+    # v3: separate colours for skin, facemask and jersey trim (padded/ is kept as backup)
+    V3 = SRC / 'v3'
+    V3.mkdir(exist_ok=True)
+    for name in ['Idle', 'Walk', 'Run', 'Right-Hand-Punch', 'Death']:
+        img = Image.open(OUT / f'{name}.png').convert('RGBA')
+        color_parts(img).save(V3 / f'{name}.png')
+        print('wrote', V3 / f'{name}.png')
+    # stances are built from the part-coloured idle, so crouched legs stay "pants"
+    idle3 = color_parts(Image.open(SRC / 'Idle.png').convert('RGBA'))
+    sheet = Image.new('RGBA', (F * len(kinds), F * len(DIRS)), (0, 0, 0, 0))
+    for row in range(len(DIRS)):
+        for col, kind in enumerate(kinds):
+            sheet.paste(stance_frame(idle3, row, kind, arm=(SKIN_LIGHT, SKIN_DARK)), (col * F, row * F))
+    add_pads(sheet).save(V3 / 'Stance.png')
+    print('wrote', V3 / 'Stance.png')
 
 
 if __name__ == '__main__':

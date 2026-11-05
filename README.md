@@ -36,7 +36,8 @@ Bowl:
   dark facemask, socks and dark cleats, plus a soft oval shadow. The grass has
   a subtle pixel-noise texture, and the yard numbers are slightly see-through.
   The football is a 10x7 sprite drawn in code, smaller than a helmet.
-- **Shoulder pads and stances** come from new sheets in `assets/players/padded/`,
+- **Uniform colours and skin tones** all come from `src/config/teams.js` (home, away and alternate uniforms plus four skin tones; switch uniforms via `MATCHUP`). Each player keeps one skin tone all game.
+- **Shoulder pads, stances and part colours** come from new sheets in `assets/players/v3/` (with `padded/` kept as a backup),
   built by `python3 tools/build_sprites.py`. The script adds pads to the original
   Lumenlore frames (filling only empty pixels) and creates a `Stance.png` sheet.
   The originals in `assets/players/` are untouched and kept as the backup.

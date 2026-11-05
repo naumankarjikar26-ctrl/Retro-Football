@@ -17,16 +17,16 @@ export const PLAYER_ORIGIN = { x: 0.5, y: 47 / 64 };
 export const HAND_HEIGHT = 11;
 
 export const PLAYER_ANIMS = {
-// Sheets in assets/players/padded/ are built by tools/build_sprites.py from the
+// Sheets in assets/players/v3/ are built by tools/build_sprites.py from the
 // originals in assets/players/ (kept untouched as the backup): the originals
 // plus shoulder pads, and a new Stance sheet.
-  idle:  { path: 'assets/players/padded/Idle.png',             frameRate: 6,  repeat: -1, placeholderFrames: 2 },
-  walk:  { path: 'assets/players/padded/Walk.png',             frameRate: 10, repeat: -1, placeholderFrames: 4 },
-  run:   { path: 'assets/players/padded/Run.png',              frameRate: 13, repeat: -1, placeholderFrames: 6 },
-  punch: { path: 'assets/players/padded/Right-Hand-Punch.png', frameRate: 20, repeat: 0,  placeholderFrames: 4 }, // QB throw
-  death: { path: 'assets/players/padded/Death.png',            frameRate: 16, repeat: 0,  placeholderFrames: 5 }, // tackled
+  idle:  { path: 'assets/players/v3/Idle.png',             frameRate: 6,  repeat: -1, placeholderFrames: 2 },
+  walk:  { path: 'assets/players/v3/Walk.png',             frameRate: 10, repeat: -1, placeholderFrames: 4 },
+  run:   { path: 'assets/players/v3/Run.png',              frameRate: 13, repeat: -1, placeholderFrames: 6 },
+  punch: { path: 'assets/players/v3/Right-Hand-Punch.png', frameRate: 20, repeat: 0,  placeholderFrames: 4 }, // QB throw
+  death: { path: 'assets/players/v3/Death.png',            frameRate: 16, repeat: 0,  placeholderFrames: 5 }, // tackled
   // pre-snap stances: one single-frame animation per column
-  stance: { path: 'assets/players/padded/Stance.png', frameRate: 1, repeat: 0, placeholderFrames: 4,
+  stance: { path: 'assets/players/v3/Stance.png', frameRate: 1, repeat: 0, placeholderFrames: 4,
     columns: ['stance3', 'stance2', 'crouch', 'stanceQB'] },
 };
 
@@ -38,6 +38,10 @@ export const SHEET_COLOR_MAP = {
   0x6abe30: 'jersey',     // torso light
   0x37946e: 'jerseyDark', // torso dark
   0xa8e070: 'jerseyLight', // shoulder-pad highlight (added by tools/build_sprites.py)
+  0xf0c8a0: 'skin',       // arms, hands, face (per-player tone)
+  0xc89070: 'skinDark',
+  0x303030: 'mask',       // facemask bars
+  0xff8000: 'trim',       // jersey hem
   0xac3232: 'pants',      // right limbs light
   0x6e2025: 'pantsDark',  // right limbs dark
   0x306082: 'pants',      // left limbs light
