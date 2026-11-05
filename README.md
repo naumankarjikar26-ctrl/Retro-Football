@@ -156,8 +156,16 @@ number keys (1-8) or by clicking/tapping a card. LEFT / RIGHT switch tabs, and
 - **No possession change yet:** punts and field goals both lead to a new
   drive at your own 25.
 
-**RANDOM PLAY** (the button under the cards, or `R`) builds a brand-new play
-every time. It shows a preview, which you can re-roll (`R`) or call (`Enter`):
+**Random plays** build a brand-new play every time. You can get one in two
+places:
+
+- **Playbook:** open the **RANDOM** tab (or press the button under the cards,
+  or `R`). It shows a preview, which you can re-roll (`R`) or call (`Enter`).
+- **On the field:** before the snap, the **R: RANDOM** button (or `R`) swaps in
+  a new random play right at the line. Press it again to re-roll until you
+  snap. This doesn't use up your audible.
+
+How the generator builds a play:
 
 - **Type:** run, pass or play action, each equally likely.
 - **Formation:** chosen to fit the type. Play action always comes from under

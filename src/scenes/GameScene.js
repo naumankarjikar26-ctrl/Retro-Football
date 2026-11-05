@@ -13,6 +13,7 @@ import { CameraController } from '../camera/CameraController.js';
 import { GameState } from '../systems/GameState.js';
 import { PlayController } from '../systems/PlayController.js';
 import { playById } from '../plays/playbook.js';
+import { randomPlay } from '../plays/randomPlay.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 import { nearest } from '../ai/OffenseAI.js';
@@ -42,6 +43,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
     this.input.keyboard.on('keydown-A', () => this.audible());
+    this.input.keyboard.on('keydown-R', () => this.randomAtLine());
     // ball carrier cuts: one press = one cut (no holding)
     for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(-1));
     for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(1));
@@ -119,6 +121,12 @@ export class GameScene extends Phaser.Scene {
       fg: 'PRESS / SPACE TO SNAP AND KICK',
     };
     bus.emit(EV.HINT, hints[def.type] || 'PULL BACK: THROW  -  TAP RB: RUN  -  A: AUDIBLE');
+  }
+
+  /** At the line: swap in a fresh random play (any number of times before the snap). */
+  randomAtLine() {
+    if (this.calling || !this.play || this.play.phase !== 'presnap') return;
+    this.startPlay(randomPlay(), { audibled: this.audibleUsed });
   }
 
   /** One audible per play, at the line: pass -> run, run -> quick pass. */

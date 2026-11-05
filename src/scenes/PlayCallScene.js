@@ -10,7 +10,7 @@ import { OFFENSE_FORMATIONS } from '../plays/formations.js';
 import { ROUTES } from '../plays/routes.js';
 import { randomPlay } from '../plays/randomPlay.js';
 
-const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand };
+const CAT_COLOR = { run: PAL.orange, short: PAL.sky, long: PAL.cyan, pa: PAL.lime, special: PAL.sand, random: PAL.lime };
 const COLS = 4;
 const CARD_W = 148;
 const CARD_H = 112;
@@ -29,13 +29,13 @@ export class PlayCallScene extends Phaser.Scene {
 
     // tab bar + quick pick
     this.tabs = CATEGORIES.map((c, i) => {
-      const x = 12 + i * 100;
-      const bg = this.add.rectangle(x, top + 6, 96, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
-      const label = new PixelText(this, x + 48, top + 12, c.name, PAL.white, 2).setAlign(0.5);
+      const x = 8 + i * 86;
+      const bg = this.add.rectangle(x, top + 6, 82, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
+      const label = new PixelText(this, x + 41, top + 12, c.name === 'PLAY ACTION' ? 'PLAY ACT' : c.name, PAL.white, 2).setAlign(0.5);
       bg.setInteractive({ useHandCursor: true }).on('pointerup', () => this.showTab(i));
       return { bg, label, cat: c.id };
     });
-    const qx = VIEW_W - 12 - 104;
+    const qx = VIEW_W - 8 - 104;
     const qb = this.add.rectangle(qx, top + 6, 104, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.sand);
     new PixelText(this, qx + 52, top + 12, 'Q QUICK PICK', PAL.sand, 2).setAlign(0.5);
     qb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.quickPick());
@@ -82,12 +82,23 @@ export class PlayCallScene extends Phaser.Scene {
     };
     btn(x + 10, 'ENTER: CALL IT', PAL.lime, () => this.pick(def));
     btn(x + w / 2 - 62, 'R: RE-ROLL', PAL.sand, () => this.rollRandom());
-    btn(x + w - 134, 'BACK', PAL.silver, () => { this.randomDef = null; this.showTab(this.tab); });
+    btn(x + w - 134, 'BACK', PAL.silver, () => { this.randomDef = null; this.showTab(0); });
     this.cardLayer.add(items);
-    this.tabs.forEach((t) => { t.bg.setFillStyle(PAL.dusk).setStrokeStyle(2, PAL.slate); t.label.setColor(PAL.white); });
+    this.tabs.forEach((t) => {
+      const on = t.cat === 'random';
+      t.bg.setFillStyle(on ? PAL.ink : PAL.dusk).setStrokeStyle(2, on ? CAT_COLOR.random : PAL.slate);
+      t.label.setColor(on ? CAT_COLOR.random : PAL.white);
+    });
   }
 
   showTab(i) {
+    // the RANDOM tab goes straight to the generator
+    if (CATEGORIES[i].id === 'random') {
+      this.tab = i;
+      PlayCallScene.lastTab = i;
+      this.rollRandom();
+      return;
+    }
     this.randomDef = null;
     this.tab = i;
     PlayCallScene.lastTab = i;
@@ -126,9 +137,9 @@ export class PlayCallScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0x2f7a45, 1).fillRect(x, y, w, h);
     const form = OFFENSE_FORMATIONS[play.formation].players;
-    const losX = x + 40;
+    const losX = x + Math.round(Math.min(w * 0.3, 16 * sx));
     g.fillStyle(PAL.sky, 1).fillRect(losX, y, 1, h);
-    const sx = 2.3;            // px per yard downfield
+    const sx = Math.max(2.1, (w - 46) / 42); // px per yard downfield (fills big previews too)
     const sy = h / 46;         // px per yard sideline-to-sideline (~46 yd shown)
     const px = (depth) => losX - depth * sx;
     const py = (lat) => y + h / 2 + lat * sy;

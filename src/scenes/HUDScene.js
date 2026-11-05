@@ -49,6 +49,14 @@ export class HUDScene extends Phaser.Scene {
     this.audBtn.add([this.audBg, this.audText]);
     this.audBg.setInteractive({ useHandCursor: true });
     this.audBg.on('pointerup', () => this.gameScene.audible());
+
+    // RANDOM button at the line: swaps in a new random play (press again to re-roll)
+    this.rndBtn = this.add.container(VIEW_W - 162, VIEW_H - HINT_H - 6);
+    this.rndBg = this.add.rectangle(0, 0, 112, 22, PAL.ink, 0.9).setOrigin(1, 1).setStrokeStyle(2, PAL.lime);
+    this.rndBtn.add([this.rndBg, new PixelText(this, -56, -16, 'R: RANDOM', PAL.lime, 2).setAlign(0.5)]);
+    this.rndBg.setInteractive({ useHandCursor: true });
+    this.rndBg.on('pointerup', () => this.gameScene.randomAtLine());
+    this.rndBtn.setVisible(false);
     this.audBtn.setVisible(false);
     // random plays: show the play type at the top of the field
     this.randomLabel = new PixelText(this, VIEW_W / 2, BAR_H + 6, '', PAL.sand, 3).setAlign(0.5).setVisible(false);
@@ -73,11 +81,13 @@ export class HUDScene extends Phaser.Scene {
     this.audBtn.setVisible(canAudible);
     if (canAudible) this.audText.setText(g.playDef.type === 'run' ? 'AUDIBLE: PASS' : 'AUDIBLE: RUN');
     this.playName.setVisible(!!g.play && !g.calling);
+    this.rndBtn.setVisible(!!g.play && !g.calling && g.play.phase === 'presnap');
   }
 
   /** True if a screen point is over a HUD button (so it doesn't snap the ball). */
   overButton(p) {
-    return this.audBtn.visible && this.audBg.getBounds().contains(p.x, p.y);
+    return (this.audBtn.visible && this.audBg.getBounds().contains(p.x, p.y))
+      || (this.rndBtn.visible && this.rndBg.getBounds().contains(p.x, p.y));
   }
 
   /** Circle at the press point and a line to the current pointer. */
