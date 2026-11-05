@@ -17,14 +17,27 @@ Bowl:
   zones at the left and right edges.
 - **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
   and far (top) sides, and the hash marks are in the middle.
-- **The sideline-to-sideline axis is foreshortened**, set by `LAT_SCALE` in
-  `src/config/constants.js`. The game still measures speed, throw length and
-  tackle and catch distance on the real ground, so this is only a visual
-  effect.
+- **The whole field width is always on screen**, sideline to sideline, so you
+  can see and throw to every receiver. The sideline-to-sideline axis is
+  foreshortened to make this fit (`FIELD_PX_H` in `src/config/constants.js`).
+  The game still measures speed, throw length and tackle and catch distance
+  on the real ground, so this is only a visual effect.
+- **The field is drawn in code**, so the 5-yard stripes, yard lines, upright
+  yard numbers, hash marks, white sidelines, the darker bench area and the
+  team-coloured end zones (with team abbreviations) all line up exactly.
+- **Score, down and distance sit in a bar above the field**, and control hints
+  in a bar below it, so neither ever covers the play.
 - **Players are drawn standing up**, using mostly their side and diagonal
   frames. Players lower on the screen are drawn in front of players higher up.
 - **A thrown ball rises up the screen** above its shadow, which slides along
   the grass. The dotted aiming arc curves upward the same way.
+- **Routes are drawn before the snap** as thick yellow curves with a dark
+  outline and a dot at the end. They stay up until the ball is thrown, and
+  the camera frames the QB and the end of every route.
+- **Nobody runs out of bounds on their own.** Routes bend along the sideline
+  (and stop inside the end zone), and every player you don't control is kept
+  inside the field. Only the player you control can step out, which ends the
+  play.
 - **The camera mostly scrolls sideways.** It follows the ball smoothly and
   never lets it leave the screen.
 
@@ -46,13 +59,21 @@ Then open <http://localhost:8080>.
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
 | Snap | `Space` / `Enter` / click | Tap |
-| Aim and throw | Drag from anywhere, release to throw | Drag, release |
+| Throw (slingshot) | Press anywhere, pull back, release | Same |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
 | Steer the ball carrier | Arrows or WASD (he runs right on his own) | Hold and drag up or down to steer |
 | Next play | `Space` / click | Tap |
 
-A longer drag throws farther and higher. While you aim, a dotted arc shows the
-throw's path and where it will land.
+**Throwing works like a slingshot.** After the snap, press anywhere on the
+screen, not on the ball, and pull back away from where you want the ball to
+go. The pull is measured from the spot you first pressed:
+
+- **Power:** a short pull is a quick, flat 5-10 yard pass. A full pull of
+  about 56 px, roughly a third of the screen height, throws 60 yards on a high,
+  slow arc.
+- **Aiming aids:** while you pull, you see a ring where you pressed and a line
+  to your finger or cursor. A dotted arc runs from the QB to a landing marker.
+- **Cancelling:** release inside the ring to cancel the throw.
 
 ## Stages
 
@@ -83,14 +104,14 @@ src/
   config/assets.js       sprite manifest, frame size, direction row order
   scenes/BootScene.js    loads/builds textures, slices sheets, makes animations
   scenes/GameScene.js    input, camera, route drawing, aiming arc, play flow
-  scenes/HUDScene.js     down & distance, score, hints, result banner
+  scenes/HUDScene.js     top score bar, bottom hint bar, result banner, pull indicator
   systems/PlayController.js  one live play: snap -> throw -> catch -> tackle
   systems/GameState.js   downs, distance, ball spot, score
   systems/events.js      event bus (snap, throw, catch, tackle, play end ...)
   entities/Player.js     movement, 8-direction facing, animations
   entities/Ball.js       ball with fake height, scaling and shadow
   camera/CameraController.js  lerped (mostly sideways) follow + "ball always on screen" guard
-  field/Field.js         horizontal field, line of scrimmage, first-down line
+  field/Field.js         field drawn in code, line of scrimmage, first-down line
   plays/routes.js        spline route library
   plays/formations.js    offensive and defensive formations
   plays/playbook.js      play definitions (Stage 2 adds more here)
@@ -124,9 +145,6 @@ The game uses these files from the sprite packs:
   throw) and `Death` (being tackled). Each sheet has 8 direction rows of 64x64
   frames. Each team's colours are palette-swapped in code (see
   `SHEET_COLOR_MAP` in `src/config/assets.js`).
-- `assets/field/FootballFieldNoBranding.png`: the field. It's already
-  horizontal and is squashed vertically at boot for the three-quarter view.
-  The field geometry in `src/config/constants.js` is calibrated to it.
 - `assets/field/FootballFieldAccessories.png`: football spiral and tumble
   frames. The power meter, aiming arrow and referee with flags are saved for
   later stages.
@@ -136,8 +154,9 @@ full sprite packs are kept on the `Sprites` branch.
 
 ## Credits
 
-- Field, football, power meter, aiming arrow, touchdown markers, and referee
-  with penalty flags: **"Football Sprites 2D" by SpawnCampGames**
+- Football, power meter, aiming arrow, touchdown markers, and referee with
+  penalty flags: **"Football Sprites 2D" by SpawnCampGames**. The field itself
+  is drawn in code.
 - Player character: **"Top Down Prototype Character Template" by Lumenlore
   Pixels**
 - Engine: [Phaser 3](https://phaser.io/) (MIT)

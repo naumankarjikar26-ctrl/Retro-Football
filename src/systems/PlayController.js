@@ -9,7 +9,8 @@
 // penalties listen to the bus events this class emits.
 
 import {
-  TUNING, FIELD_TOP, FIELD_BOTTOM, WORLD_W, WORLD_H, yd, ydLat, toYards, yardToX, xToYard, latToY, yToLat,
+  TUNING, FIELD_TOP, FIELD_BOTTOM, WORLD_W, WORLD_H, SIDELINE_MARGIN_YD, yd, ydLat, toYards, yardToX, xToYard,
+  latToY, yToLat,
   gdist, groundLen,
 } from '../config/constants.js';
 import { OFFENSE_FORMATIONS, DEFENSE_FORMATIONS } from '../plays/formations.js';
@@ -45,7 +46,8 @@ export class PlayController {
   }
 
   lineUp() {
-    const clampY = (y) => Phaser.Math.Clamp(y, FIELD_TOP + ydLat(1.5), FIELD_BOTTOM - ydLat(1.5));
+    // everyone lines up at least 3 yards inside the sidelines
+    const clampY = (y) => Phaser.Math.Clamp(y, FIELD_TOP + ydLat(3), FIELD_BOTTOM - ydLat(3));
     const off = OFFENSE_FORMATIONS[this.def.formation].players;
     for (const [slot, s] of Object.entries(off)) {
       const p = new Player(this.scene, this.losX - yd(s.at[1]), clampY(this.ballY + ydLat(s.at[0])), 'home', s.role, slot);
@@ -95,7 +97,7 @@ export class PlayController {
     }, 2, CATCH_Z);
     this.dropbackX = qb.x - yd(TUNING.qbDropback);
     bus.emit(EV.SNAP);
-    bus.emit(EV.HINT, 'DRAG TO THROW  -  ARROWS/WASD TO MOVE');
+    bus.emit(EV.HINT, 'PRESS ANYWHERE + PULL BACK TO THROW  -  ARROWS MOVE');
   }
 
   canThrow() {
@@ -103,11 +105,15 @@ export class PlayController {
       && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3);
   }
 
-  /** Throw parameters for a target (also used to draw the aiming arc). */
+  /**
+   * Throw parameters for a target (also used to draw the aiming arc).
+   * Short throws are quick and flat; deep throws hang higher and longer
+   * (60 yards: ~2.4 s in the air, ~44 px high).
+   */
   throwParams(tx, ty) {
     const q = this.qb;
     const dist = toYards(gdist(q, { x: tx, y: ty }));
-    return { dist, duration: 0.3 + dist / 24, peak: 6 + dist * 0.55 };
+    return { dist, duration: 0.35 + dist * 0.034, peak: 2 + dist * 0.7 };
   }
 
   throwTo(tx, ty) {
@@ -124,7 +130,7 @@ export class PlayController {
       this.throwTime = this.time;
       this.throwTarget = { x: tx, y: ty };
       // the receiver closest to the landing spot goes up for it
-      this.intended = nearest({ x: tx, y: ty }, this.receivers.filter((r) => r.state !== 'down'), yd(14));
+      this.intended = nearest({ x: tx, y: ty }, this.receivers.filter((r) => r.state !== 'down'), yd(25));
       this.controlled = null;
       this.throwFrom = { x: q.x, y: q.y };
       this.ball.launch(q.x, q.y, tx, ty, duration, peak, () => this.resolveCatch());
@@ -148,6 +154,7 @@ export class PlayController {
 
     for (const p of this.offense) p.update(dt);
     for (const p of this.defense) p.update(dt);
+    this.keepAIInBounds();
     this.ball.update(dt);
 
     if (this.phase === 'qb' || this.phase === 'run') this.checkCarrier();
@@ -182,6 +189,20 @@ export class PlayController {
       dy = input.steerY !== null ? Phaser.Math.Clamp((input.steerY - p.y) / ydLat(3), -1, 1) : 0;
     }
     p.moveDir(dx, dy, 1);
+  }
+
+  /** Only the player the user controls may ever step out of bounds. */
+  keepAIInBounds() {
+    const top = FIELD_TOP + ydLat(SIDELINE_MARGIN_YD * 0.5);
+    const bottom = FIELD_BOTTOM - ydLat(SIDELINE_MARGIN_YD * 0.5);
+    const left = yardToX(-9.5);
+    const right = yardToX(109.5);
+    for (const p of [...this.offense, ...this.defense]) {
+      if (p === this.controlled || p.state === 'down') continue;
+      if (p.y < top) { p.y = top; if (p.vel.y < 0) p.vel.y = 0; }
+      if (p.y > bottom) { p.y = bottom; if (p.vel.y > 0) p.vel.y = 0; }
+      p.x = Phaser.Math.Clamp(p.x, left, right);
+    }
   }
 
   startRun(carrier) {
@@ -245,7 +266,7 @@ export class PlayController {
       c.stop();
       return this.end({ type: 'touchdown' });
     }
-    if (c.y < FIELD_TOP || c.y > FIELD_BOTTOM) {
+    if (c === this.controlled && (c.y < FIELD_TOP || c.y > FIELD_BOTTOM)) {
       return this.end(this.spotResult(c, { outOfBounds: true }));
     }
 

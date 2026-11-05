@@ -1,7 +1,13 @@
 // The field and the live play. Owns input, the camera, route drawing and the
-// aiming arc; delegates the football itself to PlayController.
+// throw-aim arc; delegates the football itself to PlayController.
+//
+// Throwing is a slingshot: after the snap, press ANYWHERE and pull back. The
+// ball goes the opposite way of the pull; a longer pull throws farther and
+// higher. A tiny pull cancels.
 
-import { TUNING, PAL, yd, toYards, groundLen } from '../config/constants.js';
+import {
+  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, yd, groundLen,
+} from '../config/constants.js';
 import { Field } from '../field/Field.js';
 import { CameraController } from '../camera/CameraController.js';
 import { GameState } from '../systems/GameState.js';
@@ -10,17 +16,23 @@ import { DEFAULT_PLAY } from '../plays/playbook.js';
 import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 
+const ROUTE_COLOR = 0xffe14d; // bright yellow, reads on both grass shades
+
 export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
 
   create() {
+    // the field camera sits between the top score bar and the bottom hint bar
+    this.cameras.main.setViewport(0, BAR_H, VIEW_W, FIELD_VIEW_H);
+
     this.field = new Field(this);
     this.gs = new GameState();
-    this.routeGfx = this.add.graphics().setDepth(3);
+    this.routeGfx = this.add.graphics().setDepth(3);   // above the field, below players (10+)
     this.aimGfx = this.add.graphics().setDepth(3000);
-    this.aim = null;
+    this.aim = null;          // { sx, sy, cx, cy } in screen px while pulling
     this.play = null;
     this.deadTimer = 0;
+    this.routesVisible = false;
 
     this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER');
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
@@ -28,11 +40,10 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
     this.input.on('pointermove', (p) => this.onPointerMove(p));
     this.input.on('pointerup', (p) => this.onPointerUp(p));
+    this.input.on('pointerupoutside', (p) => this.onPointerUp(p));
 
     this.scene.launch('HUD');
     bus.on(EV.PLAY_END, this.onPlayEnd, this);
-    bus.on(EV.THROW, () => this.routeGfx.clear(), this);
-    bus.on(EV.CATCH, () => this.routeGfx.clear(), this);
     this.events.once('shutdown', () => bus.removeAllListeners());
 
     this.newPlay(true);
@@ -46,13 +57,12 @@ export class GameScene extends Phaser.Scene {
     this.aimGfx.clear();
     this.play = new PlayController(this, this.gs, DEFAULT_PLAY);
     this.field.setLines(this.gs.ballOn, this.gs.firstDownAt);
-    this.drawRoutes(1);
+    this.drawRoutes();
 
-    const qb = this.play.qb;
     if (!this.camCtl) this.camCtl = new CameraController(this, this.play.ball);
     this.camCtl.ball = this.play.ball;
     this.camCtl.setFocus(() => this.cameraFocus());
-    if (first) this.camCtl.snapTo(qb.x, qb.y);
+    if (first) this.camCtl.snapTo(this.routeFramingX());
 
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
@@ -61,24 +71,17 @@ export class GameScene extends Phaser.Scene {
 
   onAction() {
     if (!this.play) return;
-    if (this.play.phase === 'presnap') this.snap();
+    if (this.play.phase === 'presnap') this.play.snap();
     else if (this.play.phase === 'dead' && this.deadTimer > 0.6) this.newPlay();
-  }
-
-  snap() {
-    this.play.snap();
-    this.drawRoutes(0.45);
   }
 
   onPlayEnd(result) {
     this.deadTimer = 0;
     this.aim = null;
     this.aimGfx.clear();
-    this.routeGfx.clear();
     const summary = this.gs.applyResult(result);
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.HINT, 'SPACE / TAP FOR NEXT PLAY');
-    this.events.emit('result', summary);
     bus.emit('result', summary);
   }
 
@@ -86,37 +89,47 @@ export class GameScene extends Phaser.Scene {
 
   onPointerDown(p) {
     const ph = this.play?.phase;
-    if (ph === 'presnap') { this.snap(); return; }
+    if (ph === 'presnap') { this.play.snap(); return; }
     if (ph === 'dead') { this.onAction(); return; }
+    // anywhere on screen starts the pull; it is measured from this press point
     if ((ph === 'snap' || ph === 'qb') && !this.play.qbScrambling) {
-      this.aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y };
+      this.aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y, id: p.id };
     }
   }
 
   onPointerMove(p) {
-    if (this.aim) { this.aim.cx = p.x; this.aim.cy = p.y; }
+    if (this.aim && p.id === this.aim.id) { this.aim.cx = p.x; this.aim.cy = p.y; }
   }
 
-  onPointerUp() {
-    if (!this.aim) return;
+  onPointerUp(p) {
+    if (!this.aim || p.id !== this.aim.id) return;
     const target = this.aimTarget();
     this.aim = null;
     this.aimGfx.clear();
     if (target && this.play.canThrow()) this.play.throwTo(target.x, target.y);
   }
 
-  /** Drag vector from where the press started, scaled and capped. */
-  aimTarget() {
+  /** Pull vector -> power (0..1) and on-screen throw direction (opposite the pull). */
+  pullInfo() {
     if (!this.aim) return null;
+    const px = this.aim.cx - this.aim.sx;
+    const py = this.aim.cy - this.aim.sy;
+    const pull = Math.hypot(px, py);
+    if (pull < TUNING.pullCancelPx) return { pull, power: 0, cancelled: true };
+    const power = Phaser.Math.Clamp((pull - TUNING.pullCancelPx) / (TUNING.pullMaxPx - TUNING.pullCancelPx), 0, 1);
+    return { pull, power, cancelled: false, ux: -px / pull, uy: -py / pull };
+  }
+
+  /** Landing spot for the current pull, or null if the pull would cancel. */
+  aimTarget() {
+    const info = this.pullInfo();
+    if (!info || info.cancelled) return null;
     const q = this.play.qb;
-    // drag on screen -> landing spot on screen; length is measured on the ground
-    let dx = (this.aim.cx - this.aim.sx) * TUNING.aimGain;
-    let dy = (this.aim.cy - this.aim.sy) * TUNING.aimGain;
-    const len = groundLen(dx, dy);
-    if (toYards(len) < TUNING.minThrowYd) return null;
-    const max = yd(TUNING.maxThrowYd);
-    if (len > max) { dx *= max / len; dy *= max / len; }
-    return { x: q.x + dx, y: q.y + dy };
+    // slight curve: small pulls stay short (5-10 yd), a full pull reaches maxThrowYd
+    const yards = Phaser.Math.Linear(TUNING.minThrowYd, TUNING.maxThrowYd, Math.pow(info.power, 1.3));
+    // go `yards` along the ground in the pulled-away screen direction
+    const screenLen = yd(yards) / groundLen(info.ux, info.uy);
+    return { x: q.x + info.ux * screenLen, y: q.y + info.uy * screenLen, yards };
   }
 
   readInput() {
@@ -133,52 +146,76 @@ export class GameScene extends Phaser.Scene {
   update(_t, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.play.update(dt, this.readInput());
-    if (this.aim && !(this.play.phase === 'snap' || this.play.phase === 'qb')) {
-      this.aim = null;
-    }
+    const ph = this.play.phase;
+    if (this.aim && !(ph === 'snap' || ph === 'qb')) this.aim = null;
+    // routes stay up from the line-up until the ball is thrown (or the QB runs)
+    const wantRoutes = ph === 'presnap' || ph === 'snap' || (ph === 'qb' && this.play.qb.state !== 'throwing');
+    if (!wantRoutes && this.routesVisible) { this.routeGfx.clear(); this.routesVisible = false; }
     this.drawAim();
     this.camCtl.update(dt);
 
-    if (this.play.phase === 'dead') {
+    if (ph === 'dead') {
       this.deadTimer += dt;
       if (this.deadTimer > TUNING.resultHold + 0.6) this.newPlay();
     }
   }
 
+  /** Camera X that frames the QB and the END of every route. */
+  routeFramingX() {
+    const play = this.play;
+    const viewW = this.cameras.main.width;
+    const minX = play.qb.x - yd(3);
+    let maxX = minX;
+    for (const r of play.receivers) {
+      if (!r.route?.curve) continue;
+      maxX = Math.max(maxX, r.route.screenAt(1).x + yd(2));
+    }
+    if (maxX - minX > viewW) return minX + viewW / 2; // never lose the QB
+    return (minX + maxX) / 2;
+  }
+
   cameraFocus() {
     const play = this.play;
     const ball = play.ball;
-    // before the snap: on the QB, nudged downfield so the routes are in view
-    if (play.phase === 'presnap') return { x: play.qb.x + yd(5), y: play.qb.y };
+    const ph = play.phase;
     const target = this.aim && this.aimTarget();
     if (target) {
-      // lean toward the aim spot; the ball guard keeps the QB on screen
-      return { x: Phaser.Math.Linear(ball.viewX, target.x, 0.45), y: Phaser.Math.Linear(ball.viewY, target.y, 0.45) };
+      // lean toward the landing spot; the ball guard keeps the QB on screen
+      return { x: Phaser.Math.Linear(ball.viewX, target.x, 0.5) };
     }
-    return { x: ball.viewX, y: ball.viewY };
+    if (ph === 'presnap' || ph === 'snap' || ph === 'qb') return { x: this.routeFramingX() };
+    return { x: ball.viewX };
   }
 
   // ---------------------------------------------------------------- drawing
 
-  /** Smooth routes drawn as crisp 1px pixel paths with an end marker. */
-  drawRoutes(alpha) {
+  /** Every receiver's route: smooth 2px yellow line, 1px dark outline, dot at the end. */
+  drawRoutes() {
     const g = this.routeGfx;
     g.clear();
+    const paths = [];
     for (const r of this.play.receivers) {
-      const route = r.route;
-      if (!route?.curve) continue;
-      const n = Math.ceil(route.length * 1.5);
-      const pts = route.screenPoints(n);
-      g.fillStyle(PAL.ink, alpha * 0.6);
-      for (const pt of pts) g.fillRect(Math.round(pt.x), Math.round(pt.y) + 1, 1, 1);
-      g.fillStyle(PAL.sand, alpha);
-      for (const pt of pts) g.fillRect(Math.round(pt.x), Math.round(pt.y), 1, 1);
-      const end = pts[pts.length - 1];
-      g.fillRect(Math.round(end.x) - 1, Math.round(end.y) - 1, 3, 3);
+      if (!r.route?.curve) continue;
+      const pts = r.route.screenPoints(Math.ceil(r.route.length * 2));
+      paths.push(pts.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })));
     }
+    // outline pass first so lines never cover each other's outlines
+    g.fillStyle(PAL.ink, 1);
+    for (const pts of paths) {
+      for (const p of pts) g.fillRect(p.x - 2, p.y - 2, 4, 4);
+      const e = pts[pts.length - 1];
+      g.fillRect(e.x - 3, e.y - 3, 6, 6);
+    }
+    g.fillStyle(ROUTE_COLOR, 1);
+    for (const pts of paths) {
+      for (const p of pts) g.fillRect(p.x - 1, p.y - 1, 2, 2);
+      const e = pts[pts.length - 1];
+      g.fillRect(e.x - 2, e.y - 2, 4, 4);
+    }
+    this.routesVisible = true;
   }
 
-  /** Dotted, curved throw preview from the QB to the landing spot. */
+  /** Dotted curved arc from the QB up and over to the landing spot, plus a marker. */
   drawAim() {
     const g = this.aimGfx;
     g.clear();
@@ -186,29 +223,29 @@ export class GameScene extends Phaser.Scene {
     if (!target || this.play.qb.state === 'throwing') return;
     const q = this.play.qb;
     const { peak } = this.play.throwParams(target.x, target.y);
-    const fx = q.x;
-    const fy = q.y;
-    const len = Math.hypot(target.x - fx, target.y - fy);
-    const spacing = 5;
-    const offset = (this.time.now / 1000 * 14) % spacing; // marching dots
+    const len = Math.hypot(target.x - q.x, target.y - q.y) + peak * 2;
+    const n = Math.max(4, Math.round(len / 5));
+    const shift = (this.time.now / 1000 * 2.5) % 1; // marching dots
     const usable = this.play.canThrow() || this.play.phase === 'snap';
     const col = usable ? PAL.white : PAL.silver;
 
-    for (let s = offset; s < len; s += spacing) {
-      const t = s / len;
-      const x = Math.round(Phaser.Math.Linear(fx, target.x, t));
+    for (let i = 0; i < n; i++) {
+      const t = (i + shift) / n;
+      const x = Math.round(Phaser.Math.Linear(q.x, target.x, t));
       const z = Phaser.Math.Linear(THROW_START_Z, CATCH_Z, t) + 4 * peak * t * (1 - t);
-      const y = Math.round(Phaser.Math.Linear(fy, target.y, t) - z);
-      g.fillStyle(PAL.ink, 0.5).fillRect(x, y + 1, 2, 2);
-      g.fillStyle(col, 1).fillRect(x, y, 2, 2);
+      const y = Math.round(Phaser.Math.Linear(q.y, target.y, t) - z);
+      g.fillStyle(PAL.ink, 0.6).fillRect(x - 1, y, 2, 2);
+      g.fillStyle(col, 1).fillRect(x - 1, y - 1, 2, 2);
     }
-    // landing marker: pixel ellipse ring
+    // landing marker: pixel ellipse ring on the ground
     const tx = Math.round(target.x);
     const ty = Math.round(target.y);
-    g.fillStyle(PAL.sand, 1);
-    for (let a = 0; a < 16; a++) {
-      const ang = (a / 16) * Math.PI * 2;
-      g.fillRect(Math.round(tx + Math.cos(ang) * 5), Math.round(ty + Math.sin(ang) * 3), 1, 1);
+    for (const [c, r] of [[PAL.ink, 1], [PAL.sand, 0]]) {
+      g.fillStyle(c, 1);
+      for (let a = 0; a < 20; a++) {
+        const ang = (a / 20) * Math.PI * 2;
+        g.fillRect(Math.round(tx + Math.cos(ang) * 5) + r, Math.round(ty + Math.sin(ang) * 2.5) + r, 1, 1);
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-// Loads the sprite packs, rotates the field, cuts the football frames,
+// Loads the sprite packs, cuts the football frames,
 // palette-swaps the player sheets per team, slices them and builds animations.
 // Anything missing falls back to procedural placeholder art.
 
@@ -6,7 +6,7 @@ import {
   DIR_ORDER, PLAYER_FRAME, PLAYER_ANIMS, PLAYER_KEY_COLORS, SHEET_COLOR_MAP,
   FIELD_ASSETS, FOOTBALL_SPIRAL, FOOTBALL_TUMBLE,
 } from '../config/assets.js';
-import { TEAMS, WORLD_W, WORLD_H } from '../config/constants.js';
+import { TEAMS } from '../config/constants.js';
 import { buildPlaceholderPlayerSheets, buildPlaceholderMisc, paletteSwap } from '../gfx/PlaceholderArt.js';
 import { registerPixelFont } from '../gfx/PixelFont.js';
 
@@ -32,27 +32,10 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     registerPixelFont(this);
-    this.buildField();
     this.buildFootball();
     buildPlaceholderMisc(this); // fills in only what is still missing
     this.buildPlayers();
     this.scene.start('Game');
-  }
-
-  /**
-   * The field image is already horizontal (offense drives left -> right).
-   * Squash it vertically by LAT_SCALE for the three-quarter sideline view.
-   */
-  buildField() {
-    if (!this.textures.exists('src-field')) return;
-    const img = this.textures.get('src-field').getSourceImage();
-    const c = document.createElement('canvas');
-    c.width = WORLD_W;
-    c.height = WORLD_H;
-    const ctx = c.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, WORLD_W, WORLD_H);
-    this.textures.addCanvas('field-image', c);
   }
 
   /** Cut the spiral + tumble football frames into one strip texture. */

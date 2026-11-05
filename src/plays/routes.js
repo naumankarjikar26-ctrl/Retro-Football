@@ -1,4 +1,4 @@
-import { yd, LAT_SCALE } from '../config/constants.js';
+import { yd, LAT_SCALE, FIELD_TOP, FIELD_BOTTOM, SIDELINE_MARGIN_YD, ENDZONE_YD, yardToX } from '../config/constants.js';
 
 // Route library. Points are in yards relative to the receiver's start:
 //   x = toward the OUTSIDE (sideline the receiver is lined up on), y = downfield.
@@ -32,10 +32,18 @@ export const ROUTES = {
 export function buildRoute(name, x0, y0, outSign) {
   const def = ROUTES[name];
   const gy0 = y0 / LAT_SCALE;
-  const pts = def.points.map(([ox, oy]) => new Phaser.Math.Vector2(x0 + yd(oy), gy0 + yd(ox) * outSign));
+  // Routes never leave the field: anything past the sideline margin is bent
+  // to run along the sideline instead.
+  const minGY = FIELD_TOP / LAT_SCALE + yd(SIDELINE_MARGIN_YD);
+  const maxGY = FIELD_BOTTOM / LAT_SCALE - yd(SIDELINE_MARGIN_YD);
+  const clampGY = (gy) => Phaser.Math.Clamp(gy, minGY, maxGY);
+  // ...and never run out the back of the end zone
+  const maxX = yardToX(100 + ENDZONE_YD - SIDELINE_MARGIN_YD);
+  const clampX = (x) => Math.min(x, maxX);
+  const pts = def.points.map(([ox, oy]) => new Phaser.Math.Vector2(clampX(x0 + yd(oy)), clampGY(gy0 + yd(ox) * outSign)));
   if (pts.length < 2) return { name, curve: null, length: 0, settle: true };
   const curve = new Phaser.Curves.Spline(pts);
-  const toScreen = (p) => ({ x: p.x, y: p.y * LAT_SCALE });
+  const toScreen = (p) => ({ x: clampX(p.x), y: clampGY(p.y) * LAT_SCALE });
   return {
     name,
     curve,

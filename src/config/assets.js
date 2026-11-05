@@ -3,7 +3,7 @@
 // Player sheets: Lumenlore "Top Down Prototype Character Template".
 // Each sheet is 8 direction rows x N frames of 64x64. The frame count per row
 // is worked out at boot from the image width.
-// Field + football: SpawnCampGames "Football Sprites 2D".
+// Football: SpawnCampGames "Football Sprites 2D" (the field itself is drawn in code).
 //
 // Any entry with `path: null` falls back to procedural art (src/gfx/PlaceholderArt.js).
 
@@ -47,7 +47,6 @@ export const PLAYER_KEY_COLORS = {
 };
 
 export const FIELD_ASSETS = {
-  field: { path: 'assets/field/FootballFieldNoBranding.png' }, // horizontal; rotated at boot
   accessories: { path: 'assets/field/FootballFieldAccessories.png' },
 };
 
