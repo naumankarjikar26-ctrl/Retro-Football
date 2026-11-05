@@ -20,9 +20,9 @@ export const BAR_H = 20;
 export const HINT_H = 19;
 export const FIELD_VIEW_H = VIEW_H - BAR_H - HINT_H; // 161
 
-export const PX_PER_YARD = 19.2;            // ~33 yards visible across the 640px view
+export const PX_PER_YARD = 34;              // ~19 yards visible across the 640px view: a big field around the players
 export const FIELD_WIDTH_YD = 60;                    // wider than a real field (53.3 yd) to give out routes room
-export const FIELD_PX_H = 461;   // keeps the same on-screen scale as before                       // sideline-to-sideline height on screen (taller than the view: camera follows up/down)
+export const FIELD_PX_H = 816;   // sideline to sideline on screen (taller than the view: the camera follows up/down)
 export const LAT_SCALE = FIELD_PX_H / (FIELD_WIDTH_YD * PX_PER_YARD); // ~0.41
 export const yd = (yards) => yards * PX_PER_YARD;                // downfield yards -> px (x)
 export const ydLat = (yards) => yards * PX_PER_YARD * LAT_SCALE; // lateral yards -> px (y)
