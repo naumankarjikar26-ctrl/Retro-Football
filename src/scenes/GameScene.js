@@ -66,7 +66,7 @@ export class GameScene extends Phaser.Scene {
 
     bus.emit(EV.STATE, this.gs);
     bus.emit(EV.PRESNAP, this.gs);
-    bus.emit(EV.HINT, 'SPACE / TAP TO SNAP');
+    bus.emit(EV.HINT, 'PRESS + PULL BACK: SNAP AND THROW  (SPACE = SNAP)');
   }
 
   onAction() {
@@ -89,10 +89,11 @@ export class GameScene extends Phaser.Scene {
 
   onPointerDown(p) {
     const ph = this.play?.phase;
-    if (ph === 'presnap') { this.play.snap(); return; }
     if (ph === 'dead') { this.onAction(); return; }
+    // one motion: pressing snaps the ball AND starts the pull-back
+    if (ph === 'presnap') this.play.snap();
     // anywhere on screen starts the pull; it is measured from this press point
-    if ((ph === 'snap' || ph === 'qb') && !this.play.qbScrambling) {
+    if (!this.play.qbScrambling) {
       this.aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y, id: p.id };
     }
   }
@@ -106,7 +107,10 @@ export class GameScene extends Phaser.Scene {
     const target = this.aimTarget();
     this.aim = null;
     this.aimGfx.clear();
-    if (target && this.play.canThrow()) this.play.throwTo(target.x, target.y);
+    if (!target) return;
+    // released before the snap reached the QB: throw the moment he has it
+    if (this.play.phase === 'snap') this.pendingThrow = target;
+    else if (this.play.canThrow()) this.play.throwTo(target.x, target.y);
   }
 
   /** Pull vector -> power (0..1) and on-screen throw direction (opposite the pull). */
@@ -146,7 +150,12 @@ export class GameScene extends Phaser.Scene {
   update(_t, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.play.update(dt, this.readInput());
+    if (this.pendingThrow && this.play.canThrow()) {
+      this.play.throwTo(this.pendingThrow.x, this.pendingThrow.y);
+      this.pendingThrow = null;
+    }
     const ph = this.play.phase;
+    if (ph === 'dead' || ph === 'presnap') this.pendingThrow = null;
     if (this.aim && !(ph === 'snap' || ph === 'qb')) this.aim = null;
     // routes stay up from the line-up until the ball is thrown (or the QB runs)
     const wantRoutes = ph === 'presnap' || ph === 'snap' || (ph === 'qb' && this.play.qb.state !== 'throwing');
@@ -184,6 +193,8 @@ export class GameScene extends Phaser.Scene {
       return { x: Phaser.Math.Linear(ball.viewX, target.x, 0.5) };
     }
     if (ph === 'presnap' || ph === 'snap' || ph === 'qb') return { x: this.routeFramingX() };
+    // ball in the air: lean toward where it will land so the target stays in view
+    if (ph === 'air' && play.throwTarget) return { x: Phaser.Math.Linear(ball.viewX, play.throwTarget.x, 0.45) };
     return { x: ball.viewX };
   }
 
@@ -196,21 +207,16 @@ export class GameScene extends Phaser.Scene {
     const paths = [];
     for (const r of this.play.receivers) {
       if (!r.route?.curve) continue;
-      const pts = r.route.screenPoints(Math.ceil(r.route.length * 2));
+      const pts = r.route.screenPoints(Math.max(8, Math.ceil(r.route.length / 3)));
       paths.push(pts.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })));
     }
-    // outline pass first so lines never cover each other's outlines
-    g.fillStyle(PAL.ink, 1);
+    // thin dark shadow under a clean 2px line, small dot at the end
     for (const pts of paths) {
-      for (const p of pts) g.fillRect(p.x - 2, p.y - 2, 4, 4);
+      g.lineStyle(2, PAL.ink, 0.45).strokePoints(pts.map((p) => ({ x: p.x, y: p.y + 1 })));
+      g.lineStyle(2, ROUTE_COLOR, 0.9).strokePoints(pts);
       const e = pts[pts.length - 1];
-      g.fillRect(e.x - 3, e.y - 3, 6, 6);
-    }
-    g.fillStyle(ROUTE_COLOR, 1);
-    for (const pts of paths) {
-      for (const p of pts) g.fillRect(p.x - 1, p.y - 1, 2, 2);
-      const e = pts[pts.length - 1];
-      g.fillRect(e.x - 2, e.y - 2, 4, 4);
+      g.fillStyle(PAL.ink, 0.6).fillRect(e.x - 2, e.y - 1, 4, 4);
+      g.fillStyle(ROUTE_COLOR, 1).fillRect(e.x - 2, e.y - 2, 4, 4);
     }
     this.routesVisible = true;
   }
@@ -219,7 +225,8 @@ export class GameScene extends Phaser.Scene {
   drawAim() {
     const g = this.aimGfx;
     g.clear();
-    const target = this.aimTarget();
+    if (this.play.phase === 'air' && this.play.throwTarget) { this.drawLanding(g, this.play.throwTarget, true); return; }
+    const target = this.aimTarget() || this.pendingThrow;
     if (!target || this.play.qb.state === 'throwing') return;
     const q = this.play.qb;
     const { peak } = this.play.throwParams(target.x, target.y);
@@ -237,15 +244,22 @@ export class GameScene extends Phaser.Scene {
       g.fillStyle(PAL.ink, 0.6).fillRect(x - 1, y, 2, 2);
       g.fillStyle(col, 1).fillRect(x - 1, y - 1, 2, 2);
     }
-    // landing marker: pixel ellipse ring on the ground
+    this.drawLanding(g, target, false);
+  }
+
+  /** Landing marker on the ground; pulses while the ball is in the air. */
+  drawLanding(g, target, pulse) {
     const tx = Math.round(target.x);
     const ty = Math.round(target.y);
-    for (const [c, r] of [[PAL.ink, 1], [PAL.sand, 0]]) {
+    const k = pulse ? 1 + 0.25 * Math.sin(this.time.now / 90) : 1;
+    for (const [c, o, rad] of [[PAL.ink, 1, 7], [PAL.white, 0, 7], [PAL.orange, 0, 3]]) {
       g.fillStyle(c, 1);
-      for (let a = 0; a < 20; a++) {
-        const ang = (a / 20) * Math.PI * 2;
-        g.fillRect(Math.round(tx + Math.cos(ang) * 5) + r, Math.round(ty + Math.sin(ang) * 2.5) + r, 1, 1);
+      const r = rad * k;
+      for (let a = 0; a < 24; a++) {
+        const ang = (a / 24) * Math.PI * 2;
+        g.fillRect(Math.round(tx + Math.cos(ang) * r) + o, Math.round(ty + Math.sin(ang) * r * 0.5) + o, 1, 1);
       }
     }
+    g.fillStyle(PAL.orange, 1).fillRect(tx - 1, ty - 1, 2, 2);
   }
 }

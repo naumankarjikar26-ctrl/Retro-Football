@@ -97,7 +97,7 @@ export class PlayController {
     }, 2, CATCH_Z);
     this.dropbackX = qb.x - yd(TUNING.qbDropback);
     bus.emit(EV.SNAP);
-    bus.emit(EV.HINT, 'PRESS ANYWHERE + PULL BACK TO THROW  -  ARROWS MOVE');
+    bus.emit(EV.HINT, 'PULL BACK + RELEASE TO THROW  -  ARROWS MOVE');
   }
 
   canThrow() {

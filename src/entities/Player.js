@@ -18,15 +18,15 @@ export function dirFromVector(x, y) {
 
 // Default ratings. Stage 6 replaces these with roster data; Stage 4/5 use discipline.
 const ROLE_RATINGS = {
-  QB: { speed: 6.8, arm: 1.0 },
-  RB: { speed: 8.2 },
-  WR: { speed: 8.4, hands: 0.92 },
-  TE: { speed: 7.2, hands: 0.86 },
-  OL: { speed: 5.4, block: 1.0 },
-  DL: { speed: 6.2, rush: 1.0 },
-  LB: { speed: 7.3 },
-  CB: { speed: 8.2 },
-  S: { speed: 7.9 },
+  QB: { speed: 7.8, arm: 1.0 },
+  RB: { speed: 9.6 },
+  WR: { speed: 10, hands: 0.92 },
+  TE: { speed: 8.6, hands: 0.86 },
+  OL: { speed: 6.4, block: 1.0 },
+  DL: { speed: 5.6, rush: 0.8 },   // slower pass rush gives the QB time
+  LB: { speed: 8.4 },
+  CB: { speed: 9.5 },
+  S: { speed: 9.2 },
 };
 
 export class Player extends Phaser.GameObjects.Sprite {

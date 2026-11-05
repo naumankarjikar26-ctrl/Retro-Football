@@ -106,7 +106,7 @@ export const TUNING = {
   tackleRadiusYd: 1.15,
   brokenTackleChance: 0.15,
   blockRadiusYd: 1.4,
-  shedTime: [1.6, 4.2],    // seconds a defender stays engaged with a blocker
+  shedTime: [2.6, 5.2],    // seconds a defender stays engaged with a blocker
   resultHold: 1.8,         // seconds the result banner shows before resetting
   camLerp: 6,              // camera follow sharpness (higher = snappier)
   camGuardPx: 10,          // ball is always kept at least this far inside the view

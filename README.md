@@ -58,13 +58,13 @@ Then open <http://localhost:8080>.
 
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
-| Snap | `Space` / `Enter` / click | Tap |
-| Throw (slingshot) | Press anywhere, pull back, release | Same |
+| Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
+| Snap only | `Space` / `Enter` | n/a |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
 | Steer the ball carrier | Arrows or WASD (he runs right on his own) | Hold and drag up or down to steer |
 | Next play | `Space` / click | Tap |
 
-**Throwing works like a slingshot.** After the snap, press anywhere on the
+**Throwing works like a slingshot, in one motion.** Pressing snaps the ball. Keep holding, pull back anywhere on the
 screen, not on the ball, and pull back away from where you want the ball to
 go. The pull is measured from the spot you first pressed:
 

@@ -29,7 +29,7 @@ export class HUDScene extends Phaser.Scene {
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, HINT_H, PAL.ink).setOrigin(0);
     this.add.rectangle(0, VIEW_H - HINT_H, VIEW_W, 1, PAL.dusk).setOrigin(0);
     this.hint = new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H + 2, '', PAL.silver).setAlign(0.5);
-    this.onHint('SPACE / TAP TO SNAP');
+    this.onHint('PRESS + PULL BACK: SNAP AND THROW  (SPACE = SNAP)');
 
     // result banner (shown only while the play is dead)
     this.banner = this.add.container(VIEW_W / 2, BAR_H + 26).setVisible(false);

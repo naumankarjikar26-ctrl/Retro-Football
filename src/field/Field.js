@@ -13,7 +13,6 @@ const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const GRASS_LIGHT = 0x3f9e4a;
 const GRASS_DARK = 0x358a40;
 const SURROUND = 0x245c33;   // sideline / bench area outside the field
-const BENCH = 0x1d4a29;
 
 export class Field {
   constructor(scene) {
@@ -49,8 +48,6 @@ export class Field {
 
     // surround + team bench strips on both sidelines
     rect(SURROUND, 0, 0, WORLD_W, WORLD_H);
-    rect(BENCH, X(30), top - 14, X(70) - X(30), 8);
-    rect(BENCH, X(30), bottom + 5, X(70) - X(30), 6);
 
     // 5-yard stripes, exactly between yard lines
     for (let yl = 0; yl < 100; yl += 5) {
@@ -97,7 +94,7 @@ export class Field {
     for (let yl = 10; yl <= 90; yl += 10) {
       const [a, b] = String(yl <= 50 ? yl : 100 - yl);
       const x = X(yl);
-      for (const y of [top + 8, bottom - 8 - 5 * s]) {
+      for (const y of [bottom - 8 - 5 * s]) { // near side only: less clutter
         drawGlyph(ctx, a, x - 2 - 3 * s, y, s);
         drawGlyph(ctx, b, x + 3, y, s);
       }
