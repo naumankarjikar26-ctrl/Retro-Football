@@ -4,31 +4,45 @@
 export const VIEW_W = 320;
 export const VIEW_H = 180;
 
-// Field geometry is calibrated to the SpawnCampGames field image
-// (assets/field/FootballFieldNoBranding.png, 1001x505), which is rotated 90
-// degrees at boot so the field runs vertically. In that image 5 yards = 38.4 px.
+// ---------------------------------------------------------------------------
+// View: a HORIZONTAL field seen from a high sideline at a three-quarter angle.
+// Offense drives left -> right. Downfield distance runs along screen X at full
+// scale; side-to-side distance runs along screen Y, foreshortened by
+// LAT_SCALE. Players are drawn upright and sorted by Y (lower = in front).
+//
+// Geometry is calibrated to the SpawnCampGames field image
+// (assets/field/FootballFieldNoBranding.png, 1001x505): 5 yards = 38.4 px
+// across, and the image is squashed vertically by LAT_SCALE at boot.
+// ---------------------------------------------------------------------------
 export const PX_PER_YARD = 7.68;
-export const yd = (yards) => yards * PX_PER_YARD;
+export const LAT_SCALE = 0.6;
+export const yd = (yards) => yards * PX_PER_YARD;          // downfield yards -> px (x)
+export const ydLat = (yards) => yards * PX_PER_YARD * LAT_SCALE; // lateral yards -> px (y)
 export const toYards = (px) => px / PX_PER_YARD;
 
 export const FIELD_WIDTH_YD = 160 / 3; // 53.33 yd
 export const ENDZONE_YD = 10;
-export const WORLD_W = 505;            // rotated image width
-export const WORLD_H = 1001;           // rotated image height
-export const FIELD_LEFT = 49;          // inner edge of the left sideline
-export const FIELD_RIGHT = 458;        // inner edge of the right sideline
-export const FIELD_W = FIELD_RIGHT - FIELD_LEFT;
-export const CENTER_X = (FIELD_LEFT + FIELD_RIGHT) / 2;
-export const OWN_GOAL_Y = 883.5;       // centre of the bottom goal line (yard 0)
-export const HASH_OFFSET_YD = 7;       // ball is spotted between the image's hash marks
+export const IMG_W = 1001;
+export const IMG_H = 505;
+export const WORLD_W = IMG_W;
+export const WORLD_H = Math.round(IMG_H * LAT_SCALE);
+export const FIELD_TOP = 47 * LAT_SCALE;     // inner edge of the far sideline
+export const FIELD_BOTTOM = 456 * LAT_SCALE; // inner edge of the near sideline
+export const CENTER_Y = (FIELD_TOP + FIELD_BOTTOM) / 2;
+export const OWN_GOAL_X = 115.5;             // centre of the left goal line (yard 0)
+export const HASH_OFFSET_YD = 7;             // ball is spotted between the hash marks
 
-// Yard line (0 = own goal line, 100 = opponent goal line) -> world Y.
-// Offense always moves UP the screen.
-export const yardToY = (yardLine) => OWN_GOAL_Y - yd(yardLine);
-export const yToYard = (y) => (OWN_GOAL_Y - y) / PX_PER_YARD;
-// Lateral yards from the middle of the field -> world X.
-export const latToX = (lat) => CENTER_X + yd(lat);
-export const xToLat = (x) => toYards(x - CENTER_X);
+// Yard line (0 = own goal line, 100 = opponent goal line) <-> world X.
+export const yardToX = (yardLine) => OWN_GOAL_X + yd(yardLine);
+export const xToYard = (x) => (x - OWN_GOAL_X) / PX_PER_YARD;
+// Lateral yards from the middle of the field (+ = near side) <-> world Y.
+export const latToY = (lat) => CENTER_Y + ydLat(lat);
+export const yToLat = (y) => (y - CENTER_Y) / (PX_PER_YARD * LAT_SCALE);
+
+// Ground-plane helpers. Screen Y is foreshortened, so real distances must
+// un-squash it before measuring (tackle/catch/block radii, throw length...).
+export const groundLen = (dx, dy) => Math.hypot(dx, dy / LAT_SCALE);
+export const gdist = (a, b) => groundLen(b.x - a.x, b.y - a.y);
 
 // Limited retro palette ("Sweetie 16" + two grass shades).
 export const PAL = {

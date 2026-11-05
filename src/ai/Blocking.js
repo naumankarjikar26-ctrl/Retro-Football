@@ -3,14 +3,14 @@
 // Stage 5 hooks in here: a shed that happens while the blocker is badly out of
 // position (low discipline) becomes a holding call.
 
-import { TUNING, yd } from '../config/constants.js';
+import { TUNING, LAT_SCALE, yd, gdist } from '../config/constants.js';
 
 const GAP = yd(1.05);
 
 export function tryEngage(blocker, defender, time) {
   if (blocker.engaged || defender.engaged || defender.state === 'down' || blocker.state === 'down') return false;
   if (time < (defender.ai.immuneUntil || 0)) return false; // just shed a block: free to run
-  if (Phaser.Math.Distance.Between(blocker.x, blocker.y, defender.x, defender.y) > yd(TUNING.blockRadiusYd)) return false;
+  if (gdist(blocker, defender) > yd(TUNING.blockRadiusYd)) return false;
   blocker.engaged = defender;
   defender.engaged = blocker;
   const [lo, hi] = TUNING.shedTime;
@@ -36,23 +36,24 @@ export function release(blocker, time) {
  */
 export function driveBlocker(blocker, defender, protect, time) {
   if (!defender || defender.state === 'down') { blocker.stop(); return; }
+  // work in ground space, then project the block point back to the screen
   const dx = protect.x - defender.x;
-  const dy = protect.y - defender.y;
+  const dy = (protect.y - defender.y) / LAT_SCALE;
   const len = Math.hypot(dx, dy) || 1;
   const px = defender.x + (dx / len) * GAP;
-  const py = defender.y + (dy / len) * GAP;
+  const py = defender.y + (dy / len) * GAP * LAT_SCALE;
 
   if (blocker.engaged === defender) {
     if (time >= defender.ai.shedAt) { release(blocker, time); return; }
     blocker.moveToward(px, py, 1);
     // keep the pair physically together (no sliding through each other)
-    const d = Phaser.Math.Distance.Between(blocker.x, blocker.y, defender.x, defender.y);
+    const d = gdist(blocker, defender);
     if (d < GAP * 0.85) {
       const ux = (blocker.x - defender.x) / (d || 1);
-      const uy = (blocker.y - defender.y) / (d || 1);
+      const uy = (blocker.y - defender.y) / LAT_SCALE / (d || 1);
       const push = (GAP * 0.85 - d) * 0.5;
-      blocker.x += ux * push; blocker.y += uy * push;
-      defender.x -= ux * push; defender.y -= uy * push;
+      blocker.x += ux * push; blocker.y += uy * push * LAT_SCALE;
+      defender.x -= ux * push; defender.y -= uy * push * LAT_SCALE;
     }
   } else {
     blocker.moveToward(px, py, 1);

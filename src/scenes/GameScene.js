@@ -1,7 +1,7 @@
 // The field and the live play. Owns input, the camera, route drawing and the
 // aiming arc; delegates the football itself to PlayController.
 
-import { TUNING, PAL, yd, toYards } from '../config/constants.js';
+import { TUNING, PAL, yd, toYards, groundLen } from '../config/constants.js';
 import { Field } from '../field/Field.js';
 import { CameraController } from '../camera/CameraController.js';
 import { GameState } from '../systems/GameState.js';
@@ -109,9 +109,10 @@ export class GameScene extends Phaser.Scene {
   aimTarget() {
     if (!this.aim) return null;
     const q = this.play.qb;
+    // drag on screen -> landing spot on screen; length is measured on the ground
     let dx = (this.aim.cx - this.aim.sx) * TUNING.aimGain;
     let dy = (this.aim.cy - this.aim.sy) * TUNING.aimGain;
-    const len = Math.hypot(dx, dy);
+    const len = groundLen(dx, dy);
     if (toYards(len) < TUNING.minThrowYd) return null;
     const max = yd(TUNING.maxThrowYd);
     if (len > max) { dx *= max / len; dy *= max / len; }
@@ -123,8 +124,8 @@ export class GameScene extends Phaser.Scene {
     const dx = (k.RIGHT.isDown || k.D.isDown ? 1 : 0) - (k.LEFT.isDown || k.A.isDown ? 1 : 0);
     const dy = (k.DOWN.isDown || k.S.isDown ? 1 : 0) - (k.UP.isDown || k.W.isDown ? 1 : 0);
     const p = this.input.activePointer;
-    const steerX = p.isDown && !this.aim ? p.worldX : null;
-    return { dx, dy, steerX, aiming: !!this.aim };
+    const steerY = p.isDown && !this.aim ? p.worldY : null;
+    return { dx, dy, steerY, aiming: !!this.aim };
   }
 
   // ---------------------------------------------------------------- frame
@@ -147,7 +148,8 @@ export class GameScene extends Phaser.Scene {
   cameraFocus() {
     const play = this.play;
     const ball = play.ball;
-    if (play.phase === 'presnap') return { x: play.qb.x, y: play.qb.y };
+    // before the snap: on the QB, nudged downfield so the routes are in view
+    if (play.phase === 'presnap') return { x: play.qb.x + yd(5), y: play.qb.y };
     const target = this.aim && this.aimTarget();
     if (target) {
       // lean toward the aim spot; the ball guard keeps the QB on screen
@@ -166,7 +168,7 @@ export class GameScene extends Phaser.Scene {
       const route = r.route;
       if (!route?.curve) continue;
       const n = Math.ceil(route.length * 1.5);
-      const pts = route.curve.getSpacedPoints(n);
+      const pts = route.screenPoints(n);
       g.fillStyle(PAL.ink, alpha * 0.6);
       for (const pt of pts) g.fillRect(Math.round(pt.x), Math.round(pt.y) + 1, 1, 1);
       g.fillStyle(PAL.sand, alpha);

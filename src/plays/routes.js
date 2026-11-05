@@ -1,5 +1,8 @@
+import { yd, LAT_SCALE } from '../config/constants.js';
+
 // Route library. Points are in yards relative to the receiver's start:
-//   x = toward the OUTSIDE (sideline the receiver is lined up on), y = upfield.
+//   x = toward the OUTSIDE (sideline the receiver is lined up on), y = downfield.
+// On screen, downfield is to the RIGHT and the sidelines are top/bottom.
 // Routes are turned into smooth Catmull-Rom splines, so a handful of control
 // points gives a natural rounded cut.
 
@@ -18,16 +21,27 @@ export const ROUTES = {
 };
 
 /**
- * Build a world-space spline for a receiver.
+ * Build a receiver's route spline.
+ * The curve lives in GROUND space (sideline axis un-squashed) so arc length is
+ * real distance and receivers run it at a true, constant speed; `screenAt`
+ * and `screenPoints` project it onto the foreshortened field for drawing.
  * @param {string} name     route key
- * @param {number} x0, y0   receiver start (world px)
- * @param {number} outSign  +1 if outside is to the right, -1 if to the left
- * @param {(yards:number)=>number} yd yard->px converter
+ * @param {number} x0, y0   receiver start (screen px)
+ * @param {number} outSign  +1 if his sideline is the near (bottom) one, -1 if the far (top) one
  */
-export function buildRoute(name, x0, y0, outSign, yd) {
+export function buildRoute(name, x0, y0, outSign) {
   const def = ROUTES[name];
-  const pts = def.points.map(([ox, oy]) => new Phaser.Math.Vector2(x0 + yd(ox) * outSign, y0 - yd(oy)));
+  const gy0 = y0 / LAT_SCALE;
+  const pts = def.points.map(([ox, oy]) => new Phaser.Math.Vector2(x0 + yd(oy), gy0 + yd(ox) * outSign));
   if (pts.length < 2) return { name, curve: null, length: 0, settle: true };
   const curve = new Phaser.Curves.Spline(pts);
-  return { name, curve, length: curve.getLength(), settle: !!def.settle };
+  const toScreen = (p) => ({ x: p.x, y: p.y * LAT_SCALE });
+  return {
+    name,
+    curve,
+    length: curve.getLength(),
+    settle: !!def.settle,
+    screenAt: (u) => toScreen(curve.getPointAt(u)),
+    screenPoints: (n) => curve.getSpacedPoints(n).map(toScreen),
+  };
 }

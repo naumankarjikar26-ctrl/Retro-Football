@@ -1,7 +1,8 @@
 // Offensive AI for everyone the player is not controlling: receivers run their
 // spline routes, linemen pass-protect, and after a catch everybody blocks.
+// Field is horizontal: the offense attacks to the RIGHT (+x).
 
-import { yd } from '../config/constants.js';
+import { yd, ydLat, gdist } from '../config/constants.js';
 import { driveBlocker } from './Blocking.js';
 
 export function updateOffense(play, dt) {
@@ -21,7 +22,7 @@ export function updateOffense(play, dt) {
   }
 }
 
-/** Follow the route spline smoothly by distance travelled (constant speed along the curve). */
+/** Follow the route spline smoothly by distance travelled (constant real speed along the curve). */
 function runRoute(p, play, dt) {
   const r = p.route;
   const elapsed = play.time - play.snapTime;
@@ -29,19 +30,18 @@ function runRoute(p, play, dt) {
 
   if (r.done) {
     if (r.settle) { p.stop(); return; }
-    // keep running along the last tangent
-    p.moveDir(r.exitX, r.exitY, 0.9);
+    p.moveDir(r.exitX, r.exitY, 0.9); // keep running along the last tangent
     return;
   }
   // accelerate off the line, then run at full speed along the curve
   r.speed = Math.min(yd(p.maxSpeed), (r.speed || 0) + yd(14) * dt);
   r.dist = (r.dist || 0) + r.speed * dt;
   const u = Math.min(1, r.dist / r.length);
-  const pt = r.curve.getPointAt(u);
+  const pt = r.screenAt(u);
   p.driveTo(pt.x, pt.y, dt);
   if (u >= 1) {
     r.done = true;
-    const t = r.curve.getTangentAt(1);
+    const t = r.curve.getTangentAt(1); // ground-space tangent
     r.exitX = t.x;
     r.exitY = t.y;
   }
@@ -50,9 +50,9 @@ function runRoute(p, play, dt) {
 /** Intended receiver adjusts to arrive at the landing spot as the ball does. */
 function attackBall(p, play) {
   const t = play.throwTarget;
-  const timeLeft = Math.max(0.05, play.ball.flight ? (1 - play.ball.flight.t) * play.ball.flight.duration : 0.05);
-  const dist = Phaser.Math.Distance.Between(p.x, p.y, t.x, t.y);
-  const needed = dist / timeLeft / yd(p.maxSpeed);
+  const f = play.ball.flight;
+  const timeLeft = Math.max(0.05, f ? (1 - f.t) * f.duration : 0.05);
+  const needed = gdist(p, t) / timeLeft / yd(p.maxSpeed);
   p.moveToward(t.x, t.y, Phaser.Math.Clamp(needed, 0.55, 1));
 }
 
@@ -66,7 +66,7 @@ function passProtect(p, play, time) {
     driveBlocker(p, man, play.controlled || play.qb, time);
   } else {
     // nobody to block: hold the pocket
-    p.moveToward(p.ai.homeX, p.ai.homeY + yd(1.5), 0.6);
+    p.moveToward(p.ai.homeX - yd(1.5), p.ai.homeY, 0.6);
   }
 }
 
@@ -74,20 +74,20 @@ function blockDownfield(p, play, time) {
   const carrier = play.carrier;
   if (!carrier) { p.stop(); return; }
   if (p.engaged) { driveBlocker(p, p.engaged, carrier, time); return; }
-  // pick the closest free defender between me and... the carrier's path
-  const candidates = play.defense.filter((d) => !d.engaged && d.state !== 'down'
-    && Phaser.Math.Distance.Between(d.x, d.y, carrier.x, carrier.y) < yd(12));
+  // pick up the closest free defender near the ball carrier
+  const candidates = play.defense.filter((d) => !d.engaged && d.state !== 'down' && gdist(d, carrier) < yd(12));
   const man = nearest(p, candidates, yd(9));
   if (man) driveBlocker(p, man, carrier, time);
-  else p.moveToward(carrier.x + (p.x < carrier.x ? -yd(3) : yd(3)), carrier.y - yd(4), 0.8);
+  else p.moveToward(carrier.x + yd(4), carrier.y + (p.y < carrier.y ? -ydLat(3) : ydLat(3)), 0.8);
 }
 
 export function nearest(from, list, maxDist = Infinity) {
   let best = null;
   let bestD = maxDist;
   for (const o of list) {
-    const d = Phaser.Math.Distance.Between(from.x, from.y, o.x, o.y);
+    const d = gdist(from, o);
     if (d < bestD) { bestD = d; best = o; }
   }
   return best;
 }
+

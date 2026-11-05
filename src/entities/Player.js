@@ -1,7 +1,12 @@
 // A single football player: smooth acceleration-based movement, 8-direction
 // facing, and idle/walk/run/punch(throw)/death(tackled) animations.
+//
+// x/y are the player's feet in SCREEN space. Velocities (vel, desired) are in
+// GROUND space (px/s with the sideline-to-sideline axis un-squashed), so a
+// player runs at the same real speed in every direction even though the
+// field's Y axis is foreshortened by LAT_SCALE.
 
-import { TUNING, yd, toYards } from '../config/constants.js';
+import { TUNING, LAT_SCALE, yd, toYards } from '../config/constants.js';
 import { PLAYER_ORIGIN } from '../config/assets.js';
 
 const DIRS_BY_OCTANT = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
@@ -41,13 +46,13 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.vel = new Phaser.Math.Vector2();
     this.desired = new Phaser.Math.Vector2();
     this.maxSpeed = this.ratings.speed;      // yards / second
-    this.facing = this.isOffense ? 'N' : 'S';
+    this.facing = this.isOffense ? 'E' : 'W';
     this.state = 'idle';                      // idle | moving | throwing | down
     this.speedScale = 1;
     this.engaged = null;                      // blocker <-> defender link
     this.ai = {};                             // per-play AI scratch data
 
-    // (x, y) is the player's feet
+    // (x, y) is the player's feet; lower on screen = closer to the camera = drawn in front
     this.setOrigin(PLAYER_ORIGIN.x, PLAYER_ORIGIN.y);
     this.shadow = scene.add.image(x, y, 'playershadow').setAlpha(0.3).setDepth(5);
     scene.add.existing(this);
@@ -57,7 +62,7 @@ export class Player extends Phaser.GameObjects.Sprite {
   /** Steer toward a world point at a fraction of top speed. */
   moveToward(tx, ty, speedFrac = 1) {
     const dx = tx - this.x;
-    const dy = ty - this.y;
+    const dy = (ty - this.y) / LAT_SCALE; // to ground space
     const dist = Math.hypot(dx, dy);
     const max = yd(this.maxSpeed * speedFrac * this.speedScale);
     // ease in on arrival so players settle instead of jittering
@@ -66,7 +71,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     else this.desired.set((dx / dist) * speed, (dy / dist) * speed);
   }
 
-  /** Steer in a direction (unit-ish vector) at a fraction of top speed. */
+  /** Steer in a GROUND-space direction (x = downfield, y = toward the near sideline). */
   moveDir(dx, dy, speedFrac = 1) {
     const len = Math.hypot(dx, dy);
     if (len < 0.001) { this.desired.set(0, 0); return; }
@@ -78,7 +83,7 @@ export class Player extends Phaser.GameObjects.Sprite {
 
   /** Place the player directly (used by route-following, which is already smooth). */
   driveTo(x, y, dt) {
-    if (dt > 0) this.vel.set((x - this.x) / dt, (y - this.y) / dt);
+    if (dt > 0) this.vel.set((x - this.x) / dt, (y - this.y) / LAT_SCALE / dt);
     this.setPosition(x, y);
     this.desired.copy(this.vel);
     this._routeDriven = true;
@@ -88,7 +93,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     if (this.state === 'down') {
       this.vel.scale(Math.max(0, 1 - dt * 8));
       this.x += this.vel.x * dt;
-      this.y += this.vel.y * dt;
+      this.y += this.vel.y * LAT_SCALE * dt;
     } else if (!this._routeDriven) {
       // accelerate toward the desired velocity
       const maxDv = yd(TUNING.accel) * dt;
@@ -98,7 +103,7 @@ export class Player extends Phaser.GameObjects.Sprite {
       if (dv <= maxDv) this.vel.copy(this.desired);
       else this.vel.add({ x: (dvx / dv) * maxDv, y: (dvy / dv) * maxDv });
       this.x += this.vel.x * dt;
-      this.y += this.vel.y * dt;
+      this.y += this.vel.y * LAT_SCALE * dt;
     }
     this._routeDriven = false;
 
@@ -109,10 +114,17 @@ export class Player extends Phaser.GameObjects.Sprite {
 
   get speedYds() { return toYards(this.vel.length()); }
 
+  /** Screen position this player will reach in `t` seconds at current velocity. */
+  predict(t) {
+    return { x: this.x + this.vel.x * t, y: this.y + this.vel.y * LAT_SCALE * t };
+  }
+
   refreshAnim() {
     if (this.state === 'down' || this.state === 'throwing') return;
     const s = this.speedYds;
-    if (s > TUNING.idleSpeed) this.facing = dirFromVector(this.vel.x, this.vel.y);
+    // facing uses the on-screen direction, so mostly-sideways running picks
+    // the side (E/W) and diagonal frames
+    if (s > TUNING.idleSpeed) this.facing = dirFromVector(this.vel.x, this.vel.y * LAT_SCALE);
     const anim = s <= TUNING.idleSpeed ? 'idle' : s <= TUNING.walkSpeed ? 'walk' : 'run';
     this.playAnim(anim);
     // scale run cadence with speed so feet don't slide

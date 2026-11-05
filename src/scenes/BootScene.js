@@ -6,7 +6,7 @@ import {
   DIR_ORDER, PLAYER_FRAME, PLAYER_ANIMS, PLAYER_KEY_COLORS, SHEET_COLOR_MAP,
   FIELD_ASSETS, FOOTBALL_SPIRAL, FOOTBALL_TUMBLE,
 } from '../config/assets.js';
-import { TEAMS } from '../config/constants.js';
+import { TEAMS, WORLD_W, WORLD_H } from '../config/constants.js';
 import { buildPlaceholderPlayerSheets, buildPlaceholderMisc, paletteSwap } from '../gfx/PlaceholderArt.js';
 import { registerPixelFont } from '../gfx/PixelFont.js';
 
@@ -39,18 +39,19 @@ export class BootScene extends Phaser.Scene {
     this.scene.start('Game');
   }
 
-  /** The field image is horizontal; rotate it 90deg clockwise so the left end zone is at the top. */
+  /**
+   * The field image is already horizontal (offense drives left -> right).
+   * Squash it vertically by LAT_SCALE for the three-quarter sideline view.
+   */
   buildField() {
     if (!this.textures.exists('src-field')) return;
     const img = this.textures.get('src-field').getSourceImage();
     const c = document.createElement('canvas');
-    c.width = img.height;
-    c.height = img.width;
+    c.width = WORLD_W;
+    c.height = WORLD_H;
     const ctx = c.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    ctx.translate(c.width, 0);
-    ctx.rotate(Math.PI / 2);
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, WORLD_W, WORLD_H);
     this.textures.addCanvas('field-image', c);
   }
 

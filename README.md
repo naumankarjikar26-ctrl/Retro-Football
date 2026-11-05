@@ -8,6 +8,26 @@ counts, hard counts and penalties.
 The game renders at 320x180 and scales up with nearest-neighbour filtering, so
 the pixels stay sharp.
 
+## The view
+
+You watch from high up on the sideline at a three-quarter angle, like Retro
+Bowl:
+
+- **The field is horizontal.** Your offense drives left to right, with the end
+  zones at the left and right edges.
+- **Yard lines run top to bottom.** Yard numbers are along the near (bottom)
+  and far (top) sides, and the hash marks are in the middle.
+- **The sideline-to-sideline axis is foreshortened**, set by `LAT_SCALE` in
+  `src/config/constants.js`. The game still measures speed, throw length and
+  tackle and catch distance on the real ground, so this is only a visual
+  effect.
+- **Players are drawn standing up**, using mostly their side and diagonal
+  frames. Players lower on the screen are drawn in front of players higher up.
+- **A thrown ball rises up the screen** above its shadow, which slides along
+  the grass. The dotted aiming arc curves upward the same way.
+- **The camera mostly scrolls sideways.** It follows the ball smoothly and
+  never lets it leave the screen.
+
 ## Run it locally
 
 You don't need to build anything. You only need a local web server, because the
@@ -27,8 +47,8 @@ Then open <http://localhost:8080>.
 | --- | --- | --- |
 | Snap | `Space` / `Enter` / click | Tap |
 | Aim and throw | Drag from anywhere, release to throw | Drag, release |
-| Move the QB / scramble | Arrows or WASD | n/a |
-| Steer the ball carrier | Arrows or WASD (runs upfield on his own) | Hold and steer toward your finger |
+| Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
+| Steer the ball carrier | Arrows or WASD (he runs right on his own) | Hold and drag up or down to steer |
 | Next play | `Space` / click | Tap |
 
 A longer drag throws farther and higher. While you aim, a dotted arc shows the
@@ -59,7 +79,7 @@ index.html               page + Phaser script tag
 vendor/phaser.min.js     Phaser 3.80.1 (vendored, works offline)
 src/
   main.js                game config (320x180, pixelArt, FIT scaling)
-  config/constants.js    field geometry, yard<->pixel helpers, palette, tuning
+  config/constants.js    view + field geometry, yard<->pixel and ground helpers, palette, tuning
   config/assets.js       sprite manifest, frame size, direction row order
   scenes/BootScene.js    loads/builds textures, slices sheets, makes animations
   scenes/GameScene.js    input, camera, route drawing, aiming arc, play flow
@@ -69,7 +89,8 @@ src/
   systems/events.js      event bus (snap, throw, catch, tackle, play end ...)
   entities/Player.js     movement, 8-direction facing, animations
   entities/Ball.js       ball with fake height, scaling and shadow
-  camera/CameraController.js  lerped follow + "ball always on screen" guard
+  camera/CameraController.js  lerped (mostly sideways) follow + "ball always on screen" guard
+  field/Field.js         horizontal field, line of scrimmage, first-down line
   plays/routes.js        spline route library
   plays/formations.js    offensive and defensive formations
   plays/playbook.js      play definitions (Stage 2 adds more here)
@@ -103,9 +124,9 @@ The game uses these files from the sprite packs:
   throw) and `Death` (being tackled). Each sheet has 8 direction rows of 64x64
   frames. Each team's colours are palette-swapped in code (see
   `SHEET_COLOR_MAP` in `src/config/assets.js`).
-- `assets/field/FootballFieldNoBranding.png`: the field. It's rotated to run
-  vertically, and the field geometry in `src/config/constants.js` is
-  calibrated to it.
+- `assets/field/FootballFieldNoBranding.png`: the field. It's already
+  horizontal and is squashed vertically at boot for the three-quarter view.
+  The field geometry in `src/config/constants.js` is calibrated to it.
 - `assets/field/FootballFieldAccessories.png`: football spiral and tumble
   frames. The power meter, aiming arrow and referee with flags are saved for
   later stages.

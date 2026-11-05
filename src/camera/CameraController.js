@@ -27,9 +27,11 @@ export class CameraController {
   update(dt) {
     const target = this.focusFn();
     // frame-rate independent exponential smoothing
-    const k = 1 - Math.exp(-TUNING.camLerp * dt);
-    this.cx += (target.x - this.cx) * k;
-    this.cy += (target.y - this.cy) * k;
+    // mostly horizontal scrolling: the sideline-to-sideline axis eases more gently
+    const kx = 1 - Math.exp(-TUNING.camLerp * dt);
+    const ky = 1 - Math.exp(-TUNING.camLerp * 0.5 * dt);
+    this.cx += (target.x - this.cx) * kx;
+    this.cy += (target.y - this.cy) * ky;
     this.guardBall();
     this.apply();
   }

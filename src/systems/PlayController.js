@@ -1,12 +1,16 @@
 // Runs ONE live play: lines both teams up, handles the snap, the throw, the
 // catch, the run after catch and the tackle, then reports a result.
 //
+// The field is horizontal: the offense drives to the RIGHT (+x); the
+// sidelines are the top (far) and bottom (near) edges.
+//
 // Phases:  presnap -> snap -> qb -> (air -> run | air -> dead) | run -> dead
 // Stage 3 (cadence) and Stage 4 (hard count) live inside `presnap`; Stage 5
 // penalties listen to the bus events this class emits.
 
 import {
-  TUNING, FIELD_LEFT, FIELD_RIGHT, WORLD_W, WORLD_H, yd, toYards, yardToY, yToYard, latToX, xToLat,
+  TUNING, FIELD_TOP, FIELD_BOTTOM, WORLD_W, WORLD_H, yd, ydLat, toYards, yardToX, xToYard, latToY, yToLat,
+  gdist, groundLen,
 } from '../config/constants.js';
 import { OFFENSE_FORMATIONS, DEFENSE_FORMATIONS } from '../plays/formations.js';
 import { buildRoute } from '../plays/routes.js';
@@ -34,17 +38,17 @@ export class PlayController {
     this.qbScrambling = false;
 
     this.ballLat = gameState.ballLat;
-    this.ballX = latToX(gameState.ballLat);
-    this.losY = yardToY(gameState.ballOn);
+    this.ballY = latToY(gameState.ballLat); // ball's spot between the hashes
+    this.losX = yardToX(gameState.ballOn);  // line of scrimmage
     this.ball = new Ball(scene);
     this.lineUp();
   }
 
   lineUp() {
-    const clampX = (x) => Phaser.Math.Clamp(x, FIELD_LEFT + yd(1.5), FIELD_RIGHT - yd(1.5));
+    const clampY = (y) => Phaser.Math.Clamp(y, FIELD_TOP + ydLat(1.5), FIELD_BOTTOM - ydLat(1.5));
     const off = OFFENSE_FORMATIONS[this.def.formation].players;
     for (const [slot, s] of Object.entries(off)) {
-      const p = new Player(this.scene, clampX(this.ballX + yd(s.at[0])), this.losY + yd(s.at[1]), 'home', s.role, slot);
+      const p = new Player(this.scene, this.losX - yd(s.at[1]), clampY(this.ballY + ydLat(s.at[0])), 'home', s.role, slot);
       p.ai.homeX = p.x;
       p.ai.homeY = p.y;
       this.offense.push(p);
@@ -52,8 +56,8 @@ export class PlayController {
     }
     const dfn = DEFENSE_FORMATIONS[this.def.defense].players;
     for (const [slot, s] of Object.entries(dfn)) {
-      const baseX = s.over ? this.offenseBySlot[s.over].x : this.ballX;
-      const d = new Player(this.scene, clampX(baseX + yd(s.at[0])), this.losY - yd(s.at[1]), 'away', s.role, slot);
+      const baseY = s.over ? this.offenseBySlot[s.over].y : this.ballY;
+      const d = new Player(this.scene, this.losX + yd(s.at[1]), clampY(baseY + ydLat(s.at[0])), 'away', s.role, slot);
       d.job = s.job;
       this.defense.push(d);
       this.defenseBySlot[slot] = d;
@@ -64,8 +68,8 @@ export class PlayController {
     this.receivers = [];
     for (const [slot, routeName] of Object.entries(this.def.routes)) {
       const p = this.offenseBySlot[slot];
-      const outSign = Math.sign(p.x - this.ballX) || 1;
-      p.route = buildRoute(routeName, p.x, p.y, outSign, yd);
+      const outSign = Math.sign(p.y - this.ballY) || 1;
+      p.route = buildRoute(routeName, p.x, p.y, outSign);
       p.route.delay = this.def.routeDelay?.[slot] || 0;
       this.receivers.push(p);
     }
@@ -74,8 +78,8 @@ export class PlayController {
     }
 
     const c = this.offenseBySlot.C;
-    this.ball.placeAt(this.ballX, this.losY);
-    c.facing = 'N';
+    this.ball.placeAt(this.losX, this.ballY);
+    c.facing = 'E';
   }
 
   // ---------------------------------------------------------------- actions
@@ -85,24 +89,24 @@ export class PlayController {
     this.phase = 'snap';
     this.snapTime = this.time;
     const qb = this.qb;
-    this.ball.launch(this.ballX, this.losY, qb.x, qb.y, TUNING.snapTime, 3, () => {
+    this.ball.launch(this.losX, this.ballY, qb.x, qb.y, TUNING.snapTime, 3, () => {
       this.ball.holdBy(qb);
       if (this.phase === 'snap') this.phase = 'qb';
     }, 2, CATCH_Z);
-    this.dropbackY = qb.y + yd(TUNING.qbDropback);
+    this.dropbackX = qb.x - yd(TUNING.qbDropback);
     bus.emit(EV.SNAP);
     bus.emit(EV.HINT, 'DRAG TO THROW  -  ARROWS/WASD TO MOVE');
   }
 
   canThrow() {
     return this.phase === 'qb' && this.ball.carrier === this.qb && this.qb.state !== 'throwing'
-      && this.qb.state !== 'down' && this.qb.y >= this.losY - yd(0.3);
+      && this.qb.state !== 'down' && this.qb.x <= this.losX + yd(0.3);
   }
 
   /** Throw parameters for a target (also used to draw the aiming arc). */
   throwParams(tx, ty) {
     const q = this.qb;
-    const dist = toYards(Phaser.Math.Distance.Between(q.x, q.y, tx, ty));
+    const dist = toYards(gdist(q, { x: tx, y: ty }));
     return { dist, duration: 0.3 + dist / 24, peak: 6 + dist * 0.55 };
   }
 
@@ -124,7 +128,7 @@ export class PlayController {
       this.controlled = null;
       this.throwFrom = { x: q.x, y: q.y };
       this.ball.launch(q.x, q.y, tx, ty, duration, peak, () => this.resolveCatch());
-      bus.emit(EV.THROW, { from: { x: q.x, y: q.y }, to: { x: tx, y: ty }, beyondLOS: q.y < this.losY });
+      bus.emit(EV.THROW, { from: { x: q.x, y: q.y }, to: { x: tx, y: ty }, beyondLOS: q.x > this.losX });
     });
     return true;
   }
@@ -132,8 +136,8 @@ export class PlayController {
   // ---------------------------------------------------------------- update
 
   /**
-   * @param {{dx:number, dy:number, steerX:number|null}} input
-   *   dx/dy: keyboard direction (-1..1). steerX: world x the pointer is steering toward.
+   * @param {{dx:number, dy:number, steerY:number|null, aiming:boolean}} input
+   *   dx/dy: keyboard direction (-1..1, right = downfield). steerY: world y the pointer steers toward.
    */
   update(dt, input) {
     this.time += dt;
@@ -160,22 +164,22 @@ export class PlayController {
     if (p === this.qb && this.phase !== 'run') {
       if (p.state === 'throwing') return;
       if (hasKeys) p.moveDir(input.dx, input.dy, input.aiming ? 0.55 : 1);
-      else if (p.y < this.dropbackY - 1) p.moveToward(p.x, this.dropbackY, 0.55);
+      else if (p.x > this.dropbackX + 1) p.moveToward(this.dropbackX, p.y, 0.55);
       else p.stop();
       // the QB tucks it and runs once he crosses the line
-      if (this.phase === 'qb' && p.y < this.losY - yd(0.4)) {
+      if (this.phase === 'qb' && p.x > this.losX + yd(0.4)) {
         this.qbScrambling = true;
         this.startRun(p);
       }
       return;
     }
 
-    // Ball carrier: runs upfield by default, keys or pointer steer.
+    // Ball carrier: runs downfield (right) by default, keys or pointer steer.
     let dx = input.dx;
     let dy = input.dy;
     if (!hasKeys) {
-      dy = -1;
-      dx = input.steerX !== null ? Phaser.Math.Clamp((input.steerX - p.x) / yd(3), -1, 1) : 0;
+      dx = 1;
+      dy = input.steerY !== null ? Phaser.Math.Clamp((input.steerY - p.y) / ydLat(3), -1, 1) : 0;
     }
     p.moveDir(dx, dy, 1);
   }
@@ -190,11 +194,11 @@ export class PlayController {
 
   resolveCatch() {
     const t = this.throwTarget;
-    const inBounds = t.x >= FIELD_LEFT && t.x <= FIELD_RIGHT && t.y >= yardToY(110) && t.y <= yardToY(-10);
+    const inBounds = t.y >= FIELD_TOP && t.y <= FIELD_BOTTOM && t.x >= yardToX(-10) && t.x <= yardToX(110);
     if (!inBounds) return this.incomplete('OUT OF BOUNDS');
 
     const radius = yd(TUNING.catchRadiusYd);
-    const dist = (p) => Phaser.Math.Distance.Between(p.x, p.y, t.x, t.y);
+    const dist = (p) => gdist(p, t);
     const r = nearest(t, this.receivers.filter((p) => p.state !== 'down'), radius);
     const dd = nearest(t, this.defense.filter((p) => p.state !== 'down'), radius * 0.8);
 
@@ -204,7 +208,7 @@ export class PlayController {
     }
     if (!r) return this.incomplete('NO RECEIVER THERE');
 
-    const contested = dd && Phaser.Math.Distance.Between(dd.x, dd.y, r.x, r.y) < yd(1.3);
+    const contested = dd && gdist(dd, r) < yd(1.3);
     const hands = r.ratings.hands ?? 0.85;
     const chance = contested ? hands * 0.7 : Math.min(0.98, hands + 0.06);
     if (Math.random() > chance) return this.incomplete('DROPPED');
@@ -212,7 +216,7 @@ export class PlayController {
     this.ball.holdBy(r);
     bus.emit(EV.CATCH, { player: r });
     this.startRun(r);
-    if (r.y <= yardToY(100)) this.end({ type: 'touchdown' });
+    if (r.x >= yardToX(100)) this.end({ type: 'touchdown' });
     return true;
   }
 
@@ -222,7 +226,7 @@ export class PlayController {
     const from = this.throwFrom || { x: b.gx, y: b.gy + 1 };
     const dx = b.gx - from.x;
     const dy = b.gy - from.y;
-    const len = Math.hypot(dx, dy) || 1;
+    const len = groundLen(dx, dy) || 1;
     const hop = yd(2);
     const sx = b.gx;
     const sy = b.gy;
@@ -237,18 +241,18 @@ export class PlayController {
     const c = this.phase === 'qb' ? this.qb : this.carrier;
     if (!c || c.state === 'down') return;
 
-    if (this.phase === 'run' && c.y <= yardToY(100)) {
+    if (this.phase === 'run' && c.x >= yardToX(100)) {
       c.stop();
       return this.end({ type: 'touchdown' });
     }
-    if (c.x < FIELD_LEFT || c.x > FIELD_RIGHT) {
+    if (c.y < FIELD_TOP || c.y > FIELD_BOTTOM) {
       return this.end(this.spotResult(c, { outOfBounds: true }));
     }
 
     const radius = yd(TUNING.tackleRadiusYd);
     for (const d of this.defense) {
       if (d.state === 'down' || d.engaged || this.time < (d.ai.noTackleUntil || 0)) continue;
-      if (Phaser.Math.Distance.Between(d.x, d.y, c.x, c.y) > radius) continue;
+      if (gdist(d, c) > radius) continue;
 
       if (this.phase === 'run' && Math.random() < TUNING.brokenTackleChance) {
         d.ai.noTackleUntil = this.time + 0.8;
@@ -268,9 +272,9 @@ export class PlayController {
   }
 
   spotResult(c, extra) {
-    const endYard = yToYard(c.y);
+    const endYard = xToYard(c.x);
     if (endYard <= 0) return { type: 'safety' };
-    return { type: 'gain', endYard, endLat: xToLat(c.x), ...extra };
+    return { type: 'gain', endYard, endLat: yToLat(c.y), ...extra };
   }
 
   end(result) {
