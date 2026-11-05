@@ -169,7 +169,7 @@ shrinks with each one you use and is grayed out when they're gone.
 | Flea Flicker | Handoff to the RB, who stops short and pitches it back to the QB; you throw deep (go, post, deep cross). LBs and safeties bite toward the line. |
 | Statue of Liberty | The QB drops back and holds the ball up as if to throw; the RB comes around behind him, takes it from his hand and runs the other way. The defense drops for the fake throw. |
 | QB Draw | It looks like a pass: receivers go deep and the line pass-blocks, then the QB takes off up the middle (you control him). |
-| WR Pass | Backward lateral to the slot receiver behind the line; you throw deep with the WR. The QB slips out as a check-down. |
+| Halfback Pass | Snap to the QB, who tosses it back to the halfback swinging out. The QB then runs up the field as a receiver while you throw with the halfback. |
 | Hook and Lateral | Throw to the curl; the trailing receiver shadows him and gets the lateral at full speed (you control him). |
 
 **Rules for every trick play:**

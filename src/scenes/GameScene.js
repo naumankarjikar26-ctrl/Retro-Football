@@ -222,7 +222,7 @@ export class GameScene extends Phaser.Scene {
   aimTarget() {
     const info = this.pullInfo();
     if (!info || info.cancelled) return null;
-    const q = this.play.qb;
+    const q = this.play.passer;
     // slight curve: small pulls stay short (5-10 yd), a full pull reaches maxThrowYd
     const yards = Phaser.Math.Linear(TUNING.minThrowYd, TUNING.maxThrowYd, Math.pow(info.power, 1.3));
     // go `yards` along the ground in the pulled-away screen direction
@@ -254,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     if (ph === 'dead' || ph === 'presnap') this.pendingThrow = null;
     if (this.aim && !(ph === 'snap' || ph === 'qb')) this.aim = null;
     // routes stay up from the line-up until the ball is thrown (or the QB runs)
-    const wantRoutes = ph === 'presnap' || ph === 'snap' || (ph === 'qb' && this.play.qb.state !== 'throwing');
+    const wantRoutes = ph === 'presnap' || ph === 'snap' || (ph === 'qb' && this.play.passer.state !== 'throwing');
     if (wantRoutes) this.drawRoutes(); // redrawn each frame so the aimed receiver can light up
     else if (this.routesVisible) { this.routeGfx.clear(); this.routesVisible = false; }
     this.drawAim();
@@ -374,8 +374,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const target = this.aimTarget() || this.pendingThrow;
-    if (!target || this.play.qb.state === 'throwing') return;
-    const q = this.play.qb;
+    if (!target || this.play.passer.state === 'throwing') return;
+    const q = this.play.passer;
     const { peak } = this.play.throwParams(target.x, target.y);
     const len = Math.hypot(target.x - q.x, target.y - q.y) + peak * 2;
     const n = Math.max(4, Math.round(len / 5));

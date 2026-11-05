@@ -41,6 +41,8 @@ export const ROUTES = {
   fleaRun:   { points: [[0, 0], [0, 3.6]], settle: true },                          // tailback toward the line, stops short
   statueRB:  { points: [[0, 0], [-1.6, -1.8], [-5, -1], [-8, 4], [-9, 18]], curve: true }, // behind the QB, then the other side
   wrBack:    { points: [[0, 0], [1, -2.5], [2, -5]], settle: true },                 // slot drops behind the line
+  hbSwing:   { points: [[0, 0], [2.5, -0.8], [5, -1]], settle: true, curve: true },  // halfback swings out for the toss
+  qbLeak:    { points: [[0, 0], [-1, 5], [-2, 24]], curve: true },                 // QB runs up the field after tossing
   hookTrail: { points: [[0, 0], [0, 5], [5, 9], [9, 11], [12, 26]], curve: true },   // sprints past the curl
   // more run paths (I-form / singleback tailback starts straight behind the QB)
   runDive:    { points: [[0, 0], [0.3, 5], [0.6, 16]], curve: true },

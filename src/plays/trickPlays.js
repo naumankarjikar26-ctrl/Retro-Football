@@ -63,14 +63,16 @@ export const TRICK_PLAYS = [
     ],
   },
   {
-    id: 'wr-pass', name: 'WR PASS', formation: 'shotgunSpread',
-    routes: { X: 'go', Z: 'go', H: 'wrBack', TE: 'seam', RB: 'block' },
-    routeDelay: { X: 0.3, Z: 0.3 },
+    // snap to the QB, he tosses it back to the halfback, then runs up the
+    // field as a receiver while the halfback throws
+    id: 'hb-pass', name: 'HALFBACK PASS', formation: 'shotgunSpread',
+    routes: { X: 'go', Z: 'go', H: 'post', TE: 'seam', RB: 'hbSwing' },
+    routeDelay: { X: 0.3, Z: 0.3, H: 0.3 },
     bite: { roles: ['LB', 'S'], toward: 'line', sec: 0.9 },
     steps: [
-      { do: 'lateral', from: 'QB', to: 'H', after: 0.55, maxWait: 1.5, bite: true },
-      { do: 'route', who: 'QB', route: 'flat' },   // QB slips out as a check-down
-      { do: 'throw', who: 'H' },
+      { do: 'lateral', from: 'QB', to: 'RB', after: 0.35, maxWait: 1.5, bite: true },
+      { do: 'route', who: 'QB', route: 'qbLeak' },   // QB releases up the field
+      { do: 'throw', who: 'RB' },                    // you throw with the halfback
     ],
   },
   {
