@@ -228,7 +228,7 @@ export class PlayController {
     // Ball carrier: runs forward at full speed on his own. Hold up / down (or
     // press above / below him) to angle that way; let go to run straight.
     if (this.diving) return;
-    let steer = input.dy;
+    let steer = 0; // keys juke (one press = one juke); only touch steers
     if (input.steerY != null) {
       const off = input.steerY - p.y;
       steer = Math.abs(off) < CARRIER.steerDeadPx ? 0 : Math.sign(off);
@@ -251,7 +251,7 @@ export class PlayController {
     const c = this.carrier;
     if (!this.carrierUnderControl) return;
     if (this.time < (this.jukeReadyAt || 0)) return;
-    this.jukeReadyAt = this.time + CARRIER.jukeCooldown;
+    this.jukeReadyAt = this.time + TUNING.jukeCooldown;
     const top = FIELD_TOP - ydLat(1);      // he may step out only if you take him there
     const bottom = FIELD_BOTTOM + ydLat(1);
     const ty = Phaser.Math.Clamp(c.y + dir * ydLat(TUNING.jukeYards), top, bottom);
@@ -481,7 +481,7 @@ export class PlayController {
     this.controlled = carrier;
     carrier.route = null;
     this.laneY = carrier.y; // runs straight from where he caught it
-    bus.emit(EV.HINT, 'HOLD UP/DOWN: STEER - SHIFT/SWIPE: JUKE - SPACE/SWIPE FWD: DIVE');
+    bus.emit(EV.HINT, 'UP / DOWN: JUKE  -  SPACE: DIVE');
   }
 
   /** Ball comes down: catch / drop / break-up / interception (numbers in config/catching.js). */

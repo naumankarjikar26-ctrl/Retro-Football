@@ -83,8 +83,8 @@ Then open <http://localhost:8080>.
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
-| Ball carrier steer | Hold up / down | Hold above / below him |
-| Ball carrier juke | Shift + up / down | Quick swipe up / down |
+| Ball carrier steer | - | Hold above / below him |
+| Ball carrier juke | Press up / down (one press = one juke) | Quick swipe up / down |
 | Ball carrier dive | Space | Quick swipe forward |
 | Next play | `Space` / click | Tap |
 
@@ -100,9 +100,9 @@ the ball to go. The pull is measured from the spot you first pressed:
 - **Cancelling:** release inside the ring to cancel the throw.
 
 **Running with the ball:** the ball carrier runs forward at full speed on his
-own. Hold up / down (or press above / below him) to angle that way; let go to
-run straight again. A **juke** (Shift + up / down, or a quick swipe) is a fast
-sidestep with a short burst, then about a 1-second cooldown; defenders close
+own. On touch, hold above / below him to angle that way; let go to run
+straight again. A **juke** (each press of up / down, or a quick swipe) is a
+fast sidestep with a short burst; defenders close
 to you when you juke are much more likely to miss. A **dive** (Space, or a
 quick swipe forward) gains about 2 yards and ends the play.
 

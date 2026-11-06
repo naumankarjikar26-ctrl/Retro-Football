@@ -45,9 +45,9 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
     this.input.keyboard.on('keydown-P', () => this.openPlaybook());
-    // ball carrier: hold UP / DOWN to steer, Shift + UP / DOWN to juke, Space to dive
-    for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, (e) => { if (e.shiftKey) this.play?.juke(-1); });
-    for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, (e) => { if (e.shiftKey) this.play?.juke(1); });
+    // ball carrier cuts: one press = one juke (no holding); Space dives
+    for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.juke(-1));
+    for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.juke(1));
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
     this.input.on('pointermove', (p) => this.onPointerMove(p));
     this.input.on('pointerup', (p) => this.onPointerUp(p));
