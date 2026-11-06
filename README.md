@@ -85,7 +85,7 @@ Then open <http://localhost:8080>.
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
 | Ball carrier steer | - | Hold above / below him |
 | Ball carrier juke | Press up / down (one press = one juke) | Quick swipe up / down |
-| Ball carrier dive | Space | Quick swipe forward |
+| Ball carrier dive | Right arrow (or Space) | Quick swipe forward |
 | Next play | `Space` / click | Tap |
 
 **Throwing works like a slingshot, in one motion.** Pressing snaps the ball.
@@ -102,9 +102,9 @@ the ball to go. The pull is measured from the spot you first pressed:
 **Running with the ball:** the ball carrier runs forward at full speed on his
 own. On touch, hold above / below him to angle that way; let go to run
 straight again. A **juke** (each press of up / down, or a quick swipe) is a
-fast sidestep with a short burst; defenders close
-to you when you juke are much more likely to miss. A **dive** (Space, or a
-quick swipe forward) gains about 2 yards and ends the play.
+quick sidestep that costs a little speed for a moment; defenders close
+to you when you juke are much more likely to miss. A **dive** (right arrow or Space, or
+a quick swipe forward) gains about 2 yards and ends the play.
 
 **Movement feel:** players reach full speed in about 0.3 s, curve through
 direction changes, and slow briefly on hard cuts. Run cycles speed up with the

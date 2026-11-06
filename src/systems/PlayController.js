@@ -261,9 +261,9 @@ export class PlayController {
     tw.add({ targets: c, y: ty, duration: TUNING.jukeTime * 1000, ease: 'Quad.Out' });
     tw.add({ targets: c, angle: dir * 14, duration: TUNING.jukeTime * 500, yoyo: true, ease: 'Sine.Out', onComplete: () => { c.angle = 0; } });
     c.puff();
-    // short burst out of the cut
-    c.speedScale = CARRIER.jukeBurst;
-    this.scene.time.delayedCall(CARRIER.jukeBurstSec * 1000, () => { if (c.active) c.speedScale = 1; });
+    // a juke costs a little speed for a moment (never a boost)
+    c.speedScale = TUNING.jukeSlowdown;
+    this.scene.time.delayedCall(TUNING.jukeSlowTime * 1000, () => { if (c.active) c.speedScale = 1; });
     for (const d of this.defense) {
       if (d.state !== 'down' && toYards(gdist(d, c)) <= CARRIER.jukeNearYd) d.ai.jukedUntil = this.time + CARRIER.jukedSec;
     }
@@ -481,7 +481,7 @@ export class PlayController {
     this.controlled = carrier;
     carrier.route = null;
     this.laneY = carrier.y; // runs straight from where he caught it
-    bus.emit(EV.HINT, 'UP / DOWN: JUKE  -  SPACE: DIVE');
+    bus.emit(EV.HINT, 'UP / DOWN: JUKE  -  RIGHT: DIVE');
   }
 
   /** Ball comes down: catch / drop / break-up / interception (numbers in config/catching.js). */

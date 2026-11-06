@@ -48,6 +48,7 @@ export class GameScene extends Phaser.Scene {
     // ball carrier cuts: one press = one juke (no holding); Space dives
     for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.juke(-1));
     for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.juke(1));
+    for (const k of ['RIGHT', 'D']) this.input.keyboard.on(`keydown-${k}`, (e) => { if (!e.repeat) this.play?.dive(); }); // not from a held key (QB scramble)
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
     this.input.on('pointermove', (p) => this.onPointerMove(p));
     this.input.on('pointerup', (p) => this.onPointerUp(p));

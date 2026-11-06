@@ -34,8 +34,6 @@ export const CARRIER = {
   swipeMaxMs: 280,      // a swipe is a quick flick...
   swipeMinPx: 22,       // ...at least this long
   jukeCooldown: 1.0,    // (unused: jukes use TUNING.jukeCooldown)
-  jukeBurst: 1.15,      // speed fraction during the burst after a juke
-  jukeBurstSec: 0.35,
   jukeNearYd: 3.5,      // defenders this close when you juke are "juked"
   jukedSec: 0.7,        // ...for this long: their tackle chance is lowered
   diveYd: 2.2,          // extra ground gained by a dive
