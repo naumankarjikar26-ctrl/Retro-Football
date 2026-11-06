@@ -78,7 +78,7 @@ Then open <http://localhost:8080>.
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
 | Open the playbook (optional) | `P` or the PLAYBOOK button | Tap PLAYBOOK |
-| Pick a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, UP/DOWN = pages, `Esc` = close | Tap a tab, then a card |
+| Pick a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, wheel, drag or UP/DOWN = scroll, `Esc` = close | Tap a tab, then a card |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |

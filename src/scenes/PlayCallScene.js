@@ -16,7 +16,8 @@ const COLS = 4;
 const CARD_W = 148;
 const CARD_H = 112;
 const GAP = 8;
-const PER_PAGE = 8;
+const LIST_TOP = BAR_H + 36;          // visible window of the scrolling list
+const LIST_BOTTOM = VIEW_H - HINT_H - 4;
 
 export class PlayCallScene extends Phaser.Scene {
   constructor() { super('PlayCall'); }
@@ -49,61 +50,73 @@ export class PlayCallScene extends Phaser.Scene {
     qb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.close());
 
     this.cardLayer = this.add.container(0, 0);
+    this.list = this.add.container(0, 0);               // scrolling card list
+    const maskG = this.make.graphics().fillRect(0, LIST_TOP, VIEW_W, LIST_BOTTOM - LIST_TOP);
+    this.list.setMask(maskG.createGeometryMask());
+    this.scrollBar = this.add.rectangle(VIEW_W - 6, LIST_TOP, 3, 10, PAL.silver).setOrigin(0.5, 0);
+    this.scrollY = 0;
+
+    // scroll: mouse wheel, UP / DOWN keys, or drag the list
+    this.input.on('wheel', (_p, _o, _dx, dy) => this.scrollTo(this.scrollY + dy * 0.5));
+    this.input.on('pointerdown', (p) => { this.dragFrom = p.y; this.dragStart = this.scrollY; this.dragged = false; });
+    this.input.on('pointermove', (p) => {
+      if (!p.isDown || this.dragFrom == null) return;
+      const d = p.y - this.dragFrom;
+      if (Math.abs(d) > 6) this.dragged = true;
+      if (this.dragged) this.scrollTo(this.dragStart - d);
+    });
+    this.input.on('pointerup', () => { this.dragFrom = null; });
+
     const curList = cur ? (cur.cat === 'trick' ? TRICK_DEFS : PLAYBOOK.filter((p) => p.cat === cur.cat)) : [];
     const curIdx = curList.findIndex((p) => p.id === this.currentId);
-    this.showTab(this.tab, curIdx >= 0 ? Math.floor(curIdx / PER_PAGE) : 0);
+    this.showTab(this.tab);
+    if (curIdx >= 0) this.scrollTo(Math.floor(curIdx / COLS) * (CARD_H + GAP)); // show the called play
     this.input.keyboard.on('keydown', (e) => {
       if (e.key === 'ArrowLeft') this.showTab((this.tab + CATEGORIES.length - 1) % CATEGORIES.length);
       if (e.key === 'ArrowRight') this.showTab((this.tab + 1) % CATEGORIES.length);
-      if (e.key === 'ArrowDown' && this.pages > 1) this.showTab(this.tab, (this.page + 1) % this.pages);
-      if (e.key === 'ArrowUp' && this.pages > 1) this.showTab(this.tab, (this.page + this.pages - 1) % this.pages);
+      if (e.key === 'ArrowDown') this.scrollTo(this.scrollY + CARD_H + GAP);
+      if (e.key === 'ArrowUp') this.scrollTo(this.scrollY - CARD_H - GAP);
       const n = Number(e.key);
-      if (n >= 1 && n <= this.pagePlays.length) {
-        const pl = this.pagePlays[n - 1];
+      if (n >= 1 && n <= Math.min(9, this.plays.length)) {
+        const pl = this.plays[n - 1];
         if (!(pl.cat === 'trick' && this.tricksLeft <= 0)) this.pick(pl);
       }
       if (e.key === 'Escape') this.close();
     });
   }
 
-  showTab(i, page = 0) {
+  showTab(i) {
     this.tab = i;
-    this.page = page;
     PlayCallScene.lastTab = i;
     this.tabs.forEach((t, k) => {
       t.bg.setFillStyle(k === i ? PAL.ink : PAL.dusk).setStrokeStyle(2, k === i ? CAT_COLOR[t.cat] : PAL.slate);
       t.label.setColor(k === i ? CAT_COLOR[t.cat] : PAL.white);
     });
     this.cardLayer.removeAll(true);
+    this.list.removeAll(true);
     this.plays = CATEGORIES[i].id === 'trick' ? TRICK_DEFS : PLAYBOOK.filter((p) => p.cat === CATEGORIES[i].id);
     if (CATEGORIES[i].id === 'trick') {
       const msg = this.tricksLeft > 0 ? `${this.tricksLeft} OF 4 TRICK PLAYS LEFT THIS GAME` : 'NO TRICK PLAYS LEFT THIS GAME';
       this.cardLayer.add(new PixelText(this, VIEW_W / 2, VIEW_H - HINT_H - 26, msg, this.tricksLeft > 0 ? PAL.sand : PAL.slate, 2).setAlign(0.5));
     }
-    this.pages = Math.ceil(this.plays.length / PER_PAGE);
-    this.pagePlays = this.plays.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
-    if (this.pages > 1) this.makePager();
     const gridW = COLS * CARD_W + (COLS - 1) * GAP;
     const x0 = Math.round((VIEW_W - gridW) / 2);
-    const y0 = BAR_H + 36;
-    this.pagePlays.forEach((play, k) => {
-      this.makeCard(play, x0 + (k % COLS) * (CARD_W + GAP), y0 + Math.floor(k / COLS) * (CARD_H + GAP), k);
+    this.plays.forEach((play, k) => {
+      this.makeCard(play, x0 + (k % COLS) * (CARD_W + GAP), LIST_TOP + Math.floor(k / COLS) * (CARD_H + GAP), k);
     });
+    const rows = Math.ceil(this.plays.length / COLS);
+    this.maxScroll = Math.max(0, rows * (CARD_H + GAP) - GAP - (LIST_BOTTOM - LIST_TOP));
+    this.scrollTo(0);
   }
 
-  /** "< PAGE 1/3 >" under the cards; UP / DOWN keys flip pages too. */
-  makePager() {
-    const y = VIEW_H - HINT_H - 30;
-    const cx = VIEW_W / 2;
-    const flip = (d) => this.showTab(this.tab, (this.page + d + this.pages) % this.pages);
-    const btn = (x, txt, d) => {
-      const b = this.add.rectangle(x, y, 40, 22, PAL.dusk).setOrigin(0.5, 0).setStrokeStyle(2, PAL.slate);
-      b.setInteractive({ useHandCursor: true }).on('pointerup', () => flip(d));
-      this.cardLayer.add([b, new PixelText(this, x, y + 6, txt, PAL.white, 2).setAlign(0.5)]);
-    };
-    btn(cx - 90, '<', -1);
-    btn(cx + 90, '>', 1);
-    this.cardLayer.add(new PixelText(this, cx, y + 6, `PAGE ${this.page + 1}/${this.pages}`, PAL.sand, 2).setAlign(0.5));
+  scrollTo(y) {
+    this.scrollY = Phaser.Math.Clamp(y, 0, this.maxScroll);
+    this.list.y = -this.scrollY;
+    const viewH = LIST_BOTTOM - LIST_TOP;
+    const total = viewH + this.maxScroll;
+    this.scrollBar.setVisible(this.maxScroll > 0);
+    this.scrollBar.height = Math.max(16, viewH * viewH / total);
+    this.scrollBar.y = LIST_TOP + (viewH - this.scrollBar.height) * (this.maxScroll ? this.scrollY / this.maxScroll : 0);
   }
 
   makeCard(play, x, y, i) {
@@ -111,7 +124,7 @@ export class PlayCallScene extends Phaser.Scene {
     const current = play.id === this.currentId; // the play that's called right now
     const bg = this.add.rectangle(x, y, CARD_W, CARD_H, 0x24304a).setOrigin(0).setStrokeStyle(current ? 3 : 2, current ? PAL.lime : PAL.slate);
     items.push(bg);
-    items.push(new PixelText(this, x + 6, y + 6, `${i + 1} ${play.name}`, PAL.white, 2));
+    items.push(new PixelText(this, x + 6, y + 6, i < 9 ? `${i + 1} ${play.name}` : play.name, PAL.white, 2));
     const tag = { run: 'RUN', pass: 'PASS', screen: 'SCREEN', pa: 'PLAY ACTION', punt: 'PUNT', fg: 'FIELD GOAL', trick: 'TRICK PLAY' }[play.type];
     const locked = play.cat === 'trick' && this.tricksLeft <= 0; // all trick plays used
     items.push(new PixelText(this, x + 6, y + CARD_H - 15, tag, CAT_COLOR[play.cat], 2));
@@ -121,8 +134,11 @@ export class PlayCallScene extends Phaser.Scene {
     bg.on('pointerout', () => bg.setFillStyle(0x24304a));
     // pick on release so the same press can't also snap the ball
     if (locked) { bg.setFillStyle(0x1a2030).setAlpha(0.6); bg.disableInteractive(); }
-    else bg.on('pointerup', () => this.pick(play));
-    this.cardLayer.add(items);
+    else bg.on('pointerup', (p) => {
+      // ignore drags and taps on the part of a card scrolled out of view
+      if (!this.dragged && p.y >= LIST_TOP && p.y <= LIST_BOTTOM) this.pick(play);
+    });
+    this.list.add(items);
   }
 
   /** Mini chalkboard: formation dots plus each route, downfield to the right. */
