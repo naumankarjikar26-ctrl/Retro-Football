@@ -2,7 +2,7 @@
 // animate. Speeds are yards per second BEFORE TUNING.playerSpeedScale.
 
 export const POSITION_SPEED = {
-  WR: 10.0, CB: 10.0,          // fastest
+  WR: 11.5, CB: 11.3,          // fastest (CBs a hair slower so WRs can get open)
   RB: 9.4, S: 9.3,             // fast
   LB: 8.4, TE: 8.4,            // medium
   QB: 8.0,                     // medium
