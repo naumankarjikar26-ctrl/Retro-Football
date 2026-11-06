@@ -251,8 +251,21 @@ export class GameScene extends Phaser.Scene {
     const py = this.aim.cy - this.aim.sy;
     const pull = Math.hypot(px, py);
     if (pull < TUNING.pullCancelPx) return { pull, power: 0, cancelled: true };
-    const power = Phaser.Math.Clamp((pull - TUNING.pullCancelPx) / (TUNING.pullMaxPx - TUNING.pullCancelPx), 0, 1);
+    // full power needs pullMaxPx, or less when the screen edge is closer than
+    // that (pressing near the QB on the left must still allow a deep ball)
+    const room = this.roomToEdge(this.aim.sx, this.aim.sy, px / pull, py / pull);
+    const maxPx = Phaser.Math.Clamp(room - 6, TUNING.pullCancelPx + 60, TUNING.pullMaxPx);
+    const power = Phaser.Math.Clamp((pull - TUNING.pullCancelPx) / (maxPx - TUNING.pullCancelPx), 0, 1);
     return { pull, power, cancelled: false, ux: -px / pull, uy: -py / pull };
+  }
+
+  /** Screen px from (x, y) to the edge of the game view along direction (dx, dy). */
+  roomToEdge(x, y, dx, dy) {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const tx = dx < 0 ? x / -dx : dx > 0 ? (w - x) / dx : Infinity;
+    const ty = dy < 0 ? y / -dy : dy > 0 ? (h - y) / dy : Infinity;
+    return Math.min(tx, ty);
   }
 
   /** Landing spot for the current pull, or null if the pull would cancel. */
