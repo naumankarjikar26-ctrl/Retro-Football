@@ -7,10 +7,7 @@ export const CATCHING = {
   // underthrow). He's picked if, running flat out until the ball lands, he
   // can end up within this many yards of the spot - so deep balls work too.
   trackRadiusYd: 10,
-  trackAccelScale: 2.2,
-  // Aim within this many yards of a receiver and the throw leads him to
-  // where his route takes him when the ball arrives (the marker shows it).
-  leadSnapYd: 4,     // how much sharper a tracking receiver can stop / turn
+  trackAccelScale: 2.2,     // how much sharper a tracking receiver can stop / turn
 
   // Catch chance by the closest receiver's distance to the landing spot.
   tiers: [
