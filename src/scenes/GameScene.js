@@ -6,7 +6,7 @@
 // higher. A tiny pull cancels.
 
 import {
-  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, FIELD_TOP, FIELD_BOTTOM, yd, ydLat, groundLen, yardToX, latToY,
+  TUNING, PAL, VIEW_W, BAR_H, FIELD_VIEW_H, FIELD_TOP, FIELD_BOTTOM, yd, ydLat, groundLen, gdist, toYards, yardToX, latToY,
 } from '../config/constants.js';
 import { Field } from '../field/Field.js';
 import { CameraController } from '../camera/CameraController.js';
@@ -294,7 +294,31 @@ export class GameScene extends Phaser.Scene {
     const yards = Phaser.Math.Linear(TUNING.minThrowYd, TUNING.maxThrowYd, Math.pow(info.power, 1.3));
     // go `yards` along the ground in the pulled-away screen direction
     const screenLen = yd(yards) / groundLen(info.ux, info.uy);
-    return { x: q.x + info.ux * screenLen, y: q.y + info.uy * screenLen, yards };
+    const raw = { x: q.x + info.ux * screenLen, y: q.y + info.uy * screenLen, yards };
+    return this.leadReceiver(raw) || raw;
+  }
+
+  /**
+   * Aiming at a receiver means throwing to HIM: if the spot is on or near a
+   * receiver, lead him to where his route takes him when the ball gets there.
+   */
+  leadReceiver(spot) {
+    const pl = this.play;
+    let r = null;
+    let best = yd(CATCHING.leadSnapYd);
+    for (const p of pl.receivers) {
+      if (p === pl.passer || p.state === 'down' || p.state === 'tackled') continue;
+      const d = gdist(p, spot);
+      if (d < best) { best = d; r = p; }
+    }
+    if (!r) return null;
+    let led = { x: r.x, y: r.y };
+    for (let i = 0; i < 3; i++) { // flight time depends on the distance: settle it
+      const t = pl.throwParams(led.x, led.y).duration + 0.1;
+      led = pl.whereWillBe(r, t);
+    }
+    const q = pl.passer;
+    return { x: led.x, y: led.y, yards: toYards(gdist(q, led)), led: r };
   }
 
   readInput() {
