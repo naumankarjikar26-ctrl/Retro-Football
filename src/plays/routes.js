@@ -64,6 +64,9 @@ export const ROUTES = {
  * @param {number} x0, y0   receiver start (screen px)
  * @param {number} outSign  +1 if his sideline is the near (bottom) one, -1 if the far (top) one
  */
+// sideways ground counts this much when pacing a route (1 = true ground speed)
+export const ROUTE_LAT_WEIGHT = 0.55;
+
 export function buildRoute(name, x0, y0, outSign) {
   const def = ROUTES[name];
   const gy0 = y0 / LAT_SCALE;
@@ -74,7 +77,11 @@ export function buildRoute(name, x0, y0, outSign) {
   const clampGY = (gy) => Phaser.Math.Clamp(gy, minGY, maxGY);
   const maxX = yardToX(100 + ENDZONE_YD - SIDELINE_MARGIN_YD);
   const clampX = (x) => Math.min(x, maxX);
-  const pts = def.points.map(([ox, oy]) => new Phaser.Math.Vector2(clampX(x0 + yd(oy)), clampGY(gy0 + yd(ox) * outSign)));
+  // Routes are paced in a space where sideways ground counts for only
+  // ROUTE_LAT_WEIGHT, so diagonal and crossing routes don't look slow next to
+  // straight go routes on the foreshortened field.
+  const W = ROUTE_LAT_WEIGHT;
+  const pts = def.points.map(([ox, oy]) => new Phaser.Math.Vector2(clampX(x0 + yd(oy)), clampGY(gy0 + yd(ox) * outSign) * W));
   if (pts.length < 2) return { name, curve: null, length: 0, settle: true };
 
   let path;
@@ -85,11 +92,12 @@ export function buildRoute(name, x0, y0, outSign) {
     path = new Phaser.Curves.Path(pts[0].x, pts[0].y);
     for (const p of pts.slice(1)) path.lineTo(p.x, p.y);
   }
-  const toScreen = (p) => ({ x: clampX(p.x), y: clampGY(p.y) * LAT_SCALE });
+  const toScreen = (p) => ({ x: clampX(p.x), y: clampGY(p.y / W) * LAT_SCALE });
   const length = path.getLength();
   const end = path.getPoint(1);
   const before = path.getPoint(Math.max(0, 1 - 2 / Math.max(1, length)));
-  const tlen = Math.hypot(end.x - before.x, end.y - before.y) || 1;
+  const tdy = (end.y - before.y) / W; // back to ground space
+  const tlen = Math.hypot(end.x - before.x, tdy) || 1;
   return {
     name,
     curve: path,
@@ -97,7 +105,7 @@ export function buildRoute(name, x0, y0, outSign) {
     settle: !!def.settle,
     screenAt: (u) => toScreen(path.getPoint(u)),
     // ground-space unit tangent at the end (for running on after the route)
-    endTangent: { x: (end.x - before.x) / tlen, y: (end.y - before.y) / tlen },
+    endTangent: { x: (end.x - before.x) / tlen, y: tdy / tlen },
     drawPoints: () => (def.curve ? path.getSpacedPoints(Math.max(8, Math.ceil(length / 6))) : pts)
       .map(toScreen).map((p) => ({ x: Math.round(p.x) + 0.5, y: Math.round(p.y) + 0.5 })),
   };
