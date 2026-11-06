@@ -146,7 +146,7 @@ export class PlayController {
     if (dist < TUNING.minThrowYd) return false;
 
     // the receiver reads the throw as the QB winds up, not when it leaves his hand
-    const windup = 0.3;
+    const windup = 0.1;
     this.intended = this.pickTracker({ x: tx, y: ty }, duration + windup);
     this.trackTarget = { x: tx, y: ty, arriveAt: this.time + windup + duration };
     if (this.intended) this.intended.accelScale = CATCHING.trackAccelScale;

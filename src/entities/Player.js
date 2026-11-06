@@ -235,6 +235,8 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.stop();
     this.vel.scale(0.3);
     this.playAnim('punch', true);
+    // quick release: don't inherit a slow walk / run cadence from before
+    this.anims.timeScale = 2.6;
     this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       if (this.state !== 'throwing') return; // sacked mid-throw
       this.state = 'idle';
