@@ -78,7 +78,7 @@ Then open <http://localhost:8080>.
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
 | Open the playbook (optional) | `P` or the PLAYBOOK button | Tap PLAYBOOK |
-| Pick a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, `Esc` = close | Tap a tab, then a card |
+| Pick a play | `1`-`8` or click a card, LEFT/RIGHT = tabs, UP/DOWN = pages, `Esc` = close | Tap a tab, then a card |
 | Snap + throw (one motion) | Press anywhere (snaps), pull back, release (throws) | Same |
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
@@ -147,10 +147,10 @@ replayed.
 
 | Tab | Plays |
 | --- | --- |
-| Run (8) | Inside Zone, Outside Toss, Power, HB Dive, Counter, Stretch, Sweep, HB Draw |
-| Short (8) | Quick Slants, Curl Flat, Quick Outs, Stick, Drive, Hitches, Mesh, RB Screen |
-| Long (8) | Four Verts, Spread Post, Deep Posts, Corners, Fades, Comebacks, Deep Outs, Post Wheel |
-| Play action (8) | PA Post, PA Deep Cross, PA Flood, PA Seam, PA Go, PA Slant, PA Corner, PA TE Leak |
+| Run (20) | Inside Zone, Outside Toss, Power, HB Dive, Counter, Stretch, Sweep, HB Draw, plus left-side and alternate-formation versions (Zone Left, Toss Left, Iso, Trips Zone, Trips Draw, Gun Power...) |
+| Short (20) | Quick Slants, Curl Flat, Quick Outs, Stick, Drive, Hitches, Mesh, RB Screen, Snag, Spacing, Shallow Cross, Checkdown, HB Swing, Trips Screen... |
+| Long (20) | Four Verts, Spread Post, Deep Posts, Corners, Fades, Comebacks, Deep Outs, Post Wheel, Mills, Smash, Dagger, Scissors, Max Protect... |
+| Play action (20) | PA Post, PA Deep Cross, PA Flood, PA Seam, PA Go, PA Slant, PA Corner, PA TE Leak, PA Boot, PA Verts, PA Dig, PA Wheel... |
 | Kick | Punt, Field Goal |
 
 - **Formations:** shotgun spread, shotgun trips, I-form, singleback, punt
