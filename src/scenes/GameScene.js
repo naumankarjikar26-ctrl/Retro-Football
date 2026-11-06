@@ -224,7 +224,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   onPointerMove(p) {
-    if (this.aim && p.id === this.aim.id) { this.aim.cx = p.x; this.aim.cy = p.y; }
+    if (this.aim && p.id === this.aim.id) {
+      this.aim.cx = p.x;
+      this.aim.cy = p.y;
+      // keep a short history: lifting a finger off a trackpad nudges the
+      // pointer back, which must not shorten the throw
+      const h = (this.aim.hist ||= []);
+      h.push({ t: this.time.now, cx: p.x, cy: p.y });
+      while (h.length > 30) h.shift();
+    }
   }
 
   onPointerUp(p) {
@@ -241,6 +249,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (!this.aim || p.id !== this.aim.id) return;
+    // use where the pull was just before release, ignoring the last ~0.1 s of
+    // lift-off jitter (only if that pull was the longer one)
+    const pullLen = (a) => Math.hypot(a.cx - this.aim.sx, a.cy - this.aim.sy);
+    const before = (this.aim.hist || []).filter((e) => e.t <= this.time.now - TUNING.releaseIgnoreMs).pop();
+    if (before && pullLen(before) > pullLen(this.aim)) { this.aim.cx = before.cx; this.aim.cy = before.cy; }
     const target = this.aimTarget();
     this.aim = null;
     this.aimGfx.clear();
