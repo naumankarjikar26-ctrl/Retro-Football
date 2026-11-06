@@ -96,7 +96,7 @@ export const TUNING = {
   jukeTime: 0.16,          // seconds the sidestep takes
   jukeEvadeWindow: 0.25,   // extra seconds after it when tacklers tend to whiff
   jukeEvadeChance: 0.8,    // chance a tackle attempt in that window misses
-  playerSpeedScale: 0.85,  // everyone runs at this fraction of their rating
+  playerSpeedScale: 0.72,  // everyone runs at this fraction of their rating
   rushSpeedScale: 0.85,    // pass rushers slowed a bit more, for time to throw
   playClockSec: 25,        // play clock: seconds to snap before a delay of game
   trickPlaysPerGame: 4,    // TRICK PLAY uses per game
