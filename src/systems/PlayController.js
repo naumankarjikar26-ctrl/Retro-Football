@@ -280,10 +280,29 @@ export class PlayController {
       const d = gdist(r, spot);
       const shortBy = Math.max(0, d - yd(r.maxSpeed) * flightTime); // how far off he'd still be
       if (shortBy > yd(CATCHING.trackRadiusYd)) continue;
-      const score = shortBy + d * 0.05; // tie-break: nearer
+      // the ball is for the man whose route is taking him there: compare where
+      // each receiver will be on his current path when it lands, not where he is now
+      const ahead = this.whereWillBe(r, flightTime);
+      const score = shortBy + gdist(ahead, spot);
       if (score < bestScore) { bestScore = score; best = r; }
     }
     return best;
+  }
+
+  /** Where a receiver will be in t seconds if he keeps running his route. */
+  whereWillBe(r, t) {
+    const rt = r.route;
+    if (rt && rt.curve && !rt.done && rt.length) {
+      const d = (rt.dist || 0) + yd(r.maxSpeed) * t;
+      if (d <= rt.length) return rt.screenAt(d / rt.length);
+      const end = rt.screenAt(1);
+      if (rt.settle) return end;
+      const over = d - rt.length; // then on along the last tangent
+      return { x: end.x + rt.endTangent.x * over, y: end.y + rt.endTangent.y * over * LAT_SCALE };
+    }
+    if (rt && rt.done && rt.settle) return { x: r.x, y: r.y };
+    const v = r.vel || { x: 0, y: 0 };
+    return { x: r.x + v.x * t, y: r.y + v.y * LAT_SCALE * t };
   }
 
   /** Play action: the back carrying out the fake. */
