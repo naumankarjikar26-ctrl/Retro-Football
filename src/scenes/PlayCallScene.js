@@ -41,12 +41,14 @@ export class PlayCallScene extends Phaser.Scene {
       const bg = this.add.rectangle(x, top + 6, 80, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.slate);
       const name = c.id === 'trick' ? `TRICK ${this.tricksLeft}` : c.name === 'PLAY ACTION' ? 'PLAY ACT' : c.name;
       const label = new PixelText(this, x + 40, top + 12, name, PAL.white, 2).setAlign(0.5);
+      bg.setDepth(10); label.setDepth(10); // above cards scrolled up under the tab bar
       bg.setInteractive({ useHandCursor: true }).on('pointerup', () => this.showTab(i));
       return { bg, label, cat: c.id };
     });
     const qx = VIEW_W - 12 - 104;
     const qb = this.add.rectangle(qx, top + 6, 104, 22, PAL.dusk).setOrigin(0).setStrokeStyle(2, PAL.silver);
-    new PixelText(this, qx + 52, top + 12, 'ESC CLOSE', PAL.silver, 2).setAlign(0.5);
+    const qt = new PixelText(this, qx + 52, top + 12, 'ESC CLOSE', PAL.silver, 2).setAlign(0.5);
+    qb.setDepth(10); qt.setDepth(10);
     qb.setInteractive({ useHandCursor: true }).on('pointerup', () => this.close());
 
     this.cardLayer = this.add.container(0, 0);
