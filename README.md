@@ -83,7 +83,9 @@ Then open <http://localhost:8080>.
 | Snap only / run plays | `Space` / `Enter` | Tap |
 | Give it to the running back (any play) | Click the RB, before or after the snap | Tap the RB |
 | Move the QB / scramble | Arrows or WASD (right = downfield) | n/a |
-| Ball carrier juke | Press up / down (one press = one juke) | Tap above / below him |
+| Ball carrier steer | Hold up / down | Hold above / below him |
+| Ball carrier juke | Shift + up / down | Quick swipe up / down |
+| Ball carrier dive | Space | Quick swipe forward |
 | Next play | `Space` / click | Tap |
 
 **Throwing works like a slingshot, in one motion.** Pressing snaps the ball.
@@ -97,12 +99,19 @@ the ball to go. The pull is measured from the spot you first pressed:
   marker.
 - **Cancelling:** release inside the ring to cancel the throw.
 
-**Running with the ball:** after a catch or handoff, the ball carrier runs
-straight downfield on his own. Each press of up or down (or a tap above or
-below him) is a **juke**: a quick 2.5-yard sidestep with a lean. For a moment
-afterwards, a defender who reaches him usually whiffs. Time it just before
-contact. The juke values are in `src/config/constants.js` (`jukeYards`,
-`jukeEvadeChance` and friends).
+**Running with the ball:** the ball carrier runs forward at full speed on his
+own. Hold up / down (or press above / below him) to angle that way; let go to
+run straight again. A **juke** (Shift + up / down, or a quick swipe) is a fast
+sidestep with a short burst, then about a 1-second cooldown; defenders close
+to you when you juke are much more likely to miss. A **dive** (Space, or a
+quick swipe forward) gains about 2 yards and ends the play.
+
+**Movement feel:** players reach full speed in about 0.3 s, curve through
+direction changes, and slow briefly on hard cuts. Run cycles speed up with the
+player so feet don't slide; runners lean forward and bob a pixel per step,
+kick up dust when they start, cut or stop, and idle players breathe. Speeds by
+position, acceleration, cut, animation and carrier-control values live in
+`src/config/speeds.js`.
 
 ## Catching
 

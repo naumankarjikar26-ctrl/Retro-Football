@@ -14,6 +14,7 @@ import {
   gdist, groundLen, LAT_SCALE,
 } from '../config/constants.js';
 import { OFFENSE_FORMATIONS, DEFENSE_FORMATIONS } from '../plays/formations.js';
+import { CARRIER } from '../config/speeds.js';
 import { buildRoute } from '../plays/routes.js';
 import { Player } from '../entities/Player.js';
 import { Ball, CATCH_Z } from '../entities/Ball.js';
@@ -224,22 +225,33 @@ export class PlayController {
       return;
     }
 
-    // Ball carrier: always runs straight downfield. Jukes (up/down presses)
-    // snap him sideways; he never drifts at an angle.
-    p.moveDir(1, 0, 1);
+    // Ball carrier: runs forward at full speed on his own. Hold up / down (or
+    // press above / below him) to angle that way; let go to run straight.
+    if (this.diving) return;
+    let steer = input.dy;
+    if (input.steerY != null) {
+      const off = input.steerY - p.y;
+      steer = Math.abs(off) < CARRIER.steerDeadPx ? 0 : Math.sign(off);
+    }
+    p.moveDir(1, steer * CARRIER.steerSlope, 1);
   }
 
-  /** Cut one lane up (-1) or down (+1). Called on a key press / tap, not a hold. */
-  /**
-   * Juke: a quick sidestep (jukeYards in jukeTime) with a lean, while still
-   * running forward. For a moment after it, defenders who reach him mostly whiff.
-   */
-  nudge(dir) {
+  get carrierUnderControl() {
     const c = this.carrier;
-    if (!c || this.phase !== 'run' || c !== this.controlled || c.state === 'down' || c.state === 'tackled') return;
-    if (this.time < (this.jukeReadyAt || 0)) return; // short cooldown between jukes
-    this.jukeReadyAt = this.time + TUNING.jukeCooldown;
-    this.jukeUntil = this.time + TUNING.jukeTime + TUNING.jukeEvadeWindow;
+    return !!c && this.phase === 'run' && c === this.controlled && !this.diving && !this.tackling
+      && c.state !== 'down' && c.state !== 'tackled';
+  }
+
+  /**
+   * Juke (-1 up, +1 down): a quick sidestep with a short burst, then a ~1 s
+   * cooldown. Defenders close to him when he jukes are less likely to bring
+   * him down on their next try.
+   */
+  juke(dir) {
+    const c = this.carrier;
+    if (!this.carrierUnderControl) return;
+    if (this.time < (this.jukeReadyAt || 0)) return;
+    this.jukeReadyAt = this.time + CARRIER.jukeCooldown;
     const top = FIELD_TOP - ydLat(1);      // he may step out only if you take him there
     const bottom = FIELD_BOTTOM + ydLat(1);
     const ty = Phaser.Math.Clamp(c.y + dir * ydLat(TUNING.jukeYards), top, bottom);
@@ -248,10 +260,38 @@ export class PlayController {
     c.angle = 0;
     tw.add({ targets: c, y: ty, duration: TUNING.jukeTime * 1000, ease: 'Quad.Out' });
     tw.add({ targets: c, angle: dir * 14, duration: TUNING.jukeTime * 500, yoyo: true, ease: 'Sine.Out', onComplete: () => { c.angle = 0; } });
-    // a juke costs a little speed for a moment
-    c.speedScale = TUNING.jukeSlowdown;
-    this.scene.time.delayedCall(TUNING.jukeSlowTime * 1000, () => { if (c.active) c.speedScale = 1; });
+    c.puff();
+    // short burst out of the cut
+    c.speedScale = CARRIER.jukeBurst;
+    this.scene.time.delayedCall(CARRIER.jukeBurstSec * 1000, () => { if (c.active) c.speedScale = 1; });
+    for (const d of this.defense) {
+      if (d.state !== 'down' && toYards(gdist(d, c)) <= CARRIER.jukeNearYd) d.ai.jukedUntil = this.time + CARRIER.jukedSec;
+    }
     bus.emit(EV.JUKE, { carrier: c, dir });
+  }
+
+  /** Old name kept for callers: one juke. */
+  nudge(dir) { this.juke(dir); }
+
+  /** Dive forward for extra yards; he goes down and the play ends there. */
+  dive() {
+    const c = this.carrier;
+    if (!this.carrierUnderControl) return;
+    this.diving = true;
+    this.controlled = null;
+    const tw = this.scene.tweens;
+    tw.killTweensOf(c);
+    c.stop();
+    c.puff();
+    c.state = 'tackled'; // tweens own him now
+    tw.add({ targets: c, x: c.x + yd(CARRIER.diveYd), duration: CARRIER.diveMs, ease: 'Quad.Out' });
+    tw.add({ targets: c, angle: 80, duration: CARRIER.diveMs * 0.6, ease: 'Quad.Out' });
+    tw.add({ targets: c.shadow, scaleX: 1.6 * c.scaleX, duration: CARRIER.diveMs });
+    this.scene.time.delayedCall(CARRIER.diveMs + 40, () => {
+      c.state = 'down';
+      if (c.x >= yardToX(100)) return this.end({ type: 'touchdown' });
+      this.end(this.spotResult(c));
+    });
   }
 
   /** Only the player the user controls may ever step out of bounds. */
@@ -441,7 +481,7 @@ export class PlayController {
     this.controlled = carrier;
     carrier.route = null;
     this.laneY = carrier.y; // runs straight from where he caught it
-    bus.emit(EV.HINT, 'PRESS UP / DOWN (OR TAP ABOVE / BELOW) TO JUKE');
+    bus.emit(EV.HINT, 'HOLD UP/DOWN: STEER - SHIFT/SWIPE: JUKE - SPACE/SWIPE FWD: DIVE');
   }
 
   /** Ball comes down: catch / drop / break-up / interception (numbers in config/catching.js). */
@@ -518,7 +558,7 @@ export class PlayController {
 
   /** Tackles, sacks, sidelines, goal lines. */
   checkCarrier() {
-    if (this.tackling) return;
+    if (this.tackling || this.diving) return;
     const c = this.phase === 'qb' ? (this.ball.carrier || this.qb) : this.carrier;
     if (!c || c.state === 'down' || c.state === 'tackled' || !this.offense.includes(c)) return;
 
@@ -535,9 +575,9 @@ export class PlayController {
       if (d.state === 'down' || d.engaged || this.time < (d.ai.noTackleUntil || 0)) continue;
       if (gdist(d, c) > radius) continue;
 
-      // right after a juke, defenders who reach him mostly bite and whiff
-      const juking = this.phase === 'run' && this.time < (this.jukeUntil || 0);
-      if (juking && Math.random() < TUNING.jukeEvadeChance) {
+      // a defender he just juked mostly bites and whiffs
+      const juked = this.phase === 'run' && this.time < (d.ai.jukedUntil || 0);
+      if (juked && Math.random() < TUNING.jukeEvadeChance) {
         this.brokenTackle(c, d, false);
         continue;
       }

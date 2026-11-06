@@ -4,6 +4,7 @@
 
 import { yd, ydLat, gdist } from '../config/constants.js';
 import { driveBlocker } from './Blocking.js';
+import { MOVE } from '../config/speeds.js';
 
 export function updateOffense(play, dt) {
   const { phase, time } = play;
@@ -36,7 +37,7 @@ function runRoute(p, play, dt) {
     return;
   }
   // accelerate off the line, then run at full speed along the curve
-  r.speed = Math.min(yd(p.maxSpeed), (r.speed || 0) + yd(14) * dt);
+  r.speed = Math.min(yd(p.maxSpeed), (r.speed || 0) + yd(p.maxSpeed / MOVE.accelTime) * dt);
   r.dist = (r.dist || 0) + r.speed * dt;
   const u = Math.min(1, r.dist / r.length);
   const pt = r.screenAt(u);

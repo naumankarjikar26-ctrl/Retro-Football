@@ -9,6 +9,7 @@
 import { TUNING, LAT_SCALE, yd, toYards } from '../config/constants.js';
 import { PLAYER_ORIGIN, PLAYER_SCALE } from '../config/assets.js';
 import { SKIN_TONES } from '../config/teams.js';
+import { POSITION_SPEED, MOVE, ANIM } from '../config/speeds.js';
 
 const DIRS_BY_OCTANT = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 
@@ -19,15 +20,11 @@ export function dirFromVector(x, y) {
 
 // Default ratings. Stage 6 replaces these with roster data; Stage 4/5 use discipline.
 const ROLE_RATINGS = {
-  QB: { speed: 7.8, arm: 1.0 },
-  RB: { speed: 9.6 },
-  WR: { speed: 10, hands: 0.92 },
-  TE: { speed: 8.6, hands: 0.86 },
-  OL: { speed: 6.4, block: 1.0 },
-  DL: { speed: 5.6, rush: 0.8 },   // slower pass rush gives the QB time
-  LB: { speed: 8.4 },
-  CB: { speed: 9.5 },
-  S: { speed: 9.2 },
+  QB: { arm: 1.0 },
+  WR: { hands: 0.92 },
+  TE: { hands: 0.86 },
+  OL: { block: 1.0 },
+  DL: { rush: 0.8 },
 };
 
 export class Player extends Phaser.GameObjects.Sprite {
@@ -45,7 +42,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.role = role;
     this.slot = slot;
     this.isOffense = team === 'home';
-    this.ratings = { discipline: 0.8, ...ROLE_RATINGS[role] };
+    this.ratings = { discipline: 0.8, speed: POSITION_SPEED[role], ...ROLE_RATINGS[role] };
 
     this.vel = new Phaser.Math.Vector2();
     this.desired = new Phaser.Math.Vector2();
@@ -54,6 +51,9 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.facing = this.isOffense ? 'E' : 'W';
     this.state = 'idle';                      // idle | moving | throwing | down
     this.speedScale = 1;
+    this.cutUntil = 0;                        // hard-cut slowdown
+    this.clock = 0;
+    this.breathPhase = Math.random() * ANIM.breathSec;
     this.engaged = null;                      // blocker <-> defender link
     this.ai = {};                             // per-play AI scratch data
     // pre-snap stance (cleared at the snap)
@@ -98,6 +98,8 @@ export class Player extends Phaser.GameObjects.Sprite {
   }
 
   update(dt) {
+    this.clock += dt;
+    const prevSpeed = this.speedYds;
     if (this.state === 'tackled') {
       // locked in a tackle: tweens drive the position
       this.vel.set(0, 0);
@@ -106,12 +108,17 @@ export class Player extends Phaser.GameObjects.Sprite {
       this.x += this.vel.x * dt;
       this.y += this.vel.y * LAT_SCALE * dt;
     } else if (!this._routeDriven) {
-      // accelerate toward the desired velocity
-      const maxDv = yd(TUNING.accel * (this.accelScale || 1)) * dt; // trackers turn sharper
-      const dvx = this.desired.x - this.vel.x;
-      const dvy = this.desired.y - this.vel.y;
+      // accelerate toward the desired velocity: full speed in MOVE.accelTime,
+      // and a direction change bends the path instead of snapping it
+      const cut = this.clock < this.cutUntil ? MOVE.cutSlow : 1;
+      const maxDv = yd(this.maxSpeed / MOVE.accelTime * (this.accelScale || 1)) * dt; // trackers turn sharper
+      const dx0 = this.desired.x * cut;
+      const dy0 = this.desired.y * cut;
+      this.checkCut(dx0, dy0);
+      const dvx = dx0 - this.vel.x;
+      const dvy = dy0 - this.vel.y;
       const dv = Math.hypot(dvx, dvy);
-      if (dv <= maxDv) this.vel.copy(this.desired);
+      if (dv <= maxDv) this.vel.set(dx0, dy0);
       else this.vel.add({ x: (dvx / dv) * maxDv, y: (dvy / dv) * maxDv });
       this.x += this.vel.x * dt;
       this.y += this.vel.y * LAT_SCALE * dt;
@@ -121,6 +128,69 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.shadow.setPosition(Math.round(this.x + (this.shadowDX || 0)), Math.round(this.y));
     this.setDepth(10 + this.y / 1000);
     this.refreshAnim();
+    this.dustCheck(prevSpeed);
+    this.applyPose();
+  }
+
+  /** Hard cut at speed: a short slowdown and a dust puff. */
+  checkCut(dx, dy) {
+    const v = this.vel.length();
+    const d = Math.hypot(dx, dy);
+    if (d < 1 || v < yd(this.maxSpeed * MOVE.cutMinSpeed) || this.clock < (this.cutReadyAt || 0)) return;
+    const cos = (this.vel.x * dx + this.vel.y * dy) / (v * d);
+    if (cos > Math.cos(MOVE.cutAngleDeg * Math.PI / 180)) return;
+    this.cutUntil = this.clock + MOVE.cutSlowSec;
+    this.cutReadyAt = this.clock + MOVE.cutCooldown;
+    this.puff();
+  }
+
+  /** Dust when he starts running or stops hard. */
+  dustCheck(prev) {
+    if (this.state === 'down' || this.state === 'tackled') return;
+    const s = this.speedYds;
+    const start = prev < 1.5 && s >= 1.5;
+    const stop = prev > this.maxSpeed * 0.6 && this.desired.length() < yd(1);
+    if (start || stop) this.puff();
+  }
+
+  /** Little grass / dust puff kicked up behind the feet. */
+  puff() {
+    if (this.clock < (this.dustReadyAt || 0) || !this.scene || !this.visible) return;
+    this.dustReadyAt = this.clock + ANIM.dustSec;
+    const sc = this.scene;
+    const len = this.vel.length() || 1;
+    const bx = -this.vel.x / len;                      // behind him
+    const by = -this.vel.y / len * LAT_SCALE;
+    for (let i = 0; i < 3; i++) {
+      const c = i === 0 ? 0xc8d89a : i === 1 ? 0xe8e0c0 : 0x9cc070;
+      const r = sc.add.rectangle(this.x + bx * 3, this.y - 1, 2, 2, c, 0.9).setDepth(this.depth - 0.0005);
+      const spread = (i - 1) * 4;
+      sc.tweens.add({
+        targets: r, x: r.x + bx * (6 + i * 2) - by * spread, y: r.y + by * 4 + bx * spread * 0.3 - 3 - i,
+        alpha: 0, scale: 1.6, duration: 260 + i * 60, ease: 'Quad.Out', onComplete: () => r.destroy(),
+      });
+    }
+  }
+
+  /** Forward lean + 1px step bob while running; 1px breathing while standing. */
+  applyPose() {
+    if (this.state === 'down' || this.state === 'tackled') return;
+    let bob = 0;
+    const s = this.speedYds;
+    const running = this.currentAnimName === 'run' && !this.stance;
+    if (running) {
+      const f = this.anims.currentFrame ? this.anims.currentFrame.index - 1 : 0;
+      bob = ANIM.bobFrames[f % ANIM.bobFrames.length] || 0;
+    } else if (this.currentAnimName === 'idle' || this.stance) {
+      bob = ((this.clock + this.breathPhase) % ANIM.breathSec) < ANIM.breathSec / 2 ? 1 : 0;
+    }
+    this.setOrigin(PLAYER_ORIGIN.x, PLAYER_ORIGIN.y + bob / PLAYER_SCALE / 64);
+    // lean into the run (rotation is about the feet); tweens own the angle while active
+    if (this.state !== 'throwing' && !this.scene.tweens.isTweening(this)) {
+      const len = this.vel.length() || 1;
+      const k = running ? Math.min(1, s / this.maxSpeed) : 0;
+      this.angle = ANIM.leanDeg * k * (this.vel.x / len);
+    }
   }
 
   get speedYds() { return toYards(this.vel.length()); }
@@ -140,7 +210,10 @@ export class Player extends Phaser.GameObjects.Sprite {
     const anim = s <= TUNING.idleSpeed ? 'idle' : s <= TUNING.walkSpeed ? 'walk' : 'run';
     this.playAnim(anim);
     // scale run cadence with speed so feet don't slide
-    if (anim === 'run') this.anims.timeScale = Phaser.Math.Clamp(s / 7, 0.7, 1.3);
+    // (one cycle = 6 frames = ANIM.*CycleYd of ground at the sheet's frame rate)
+    const fr = this.anims.currentAnim?.frameRate || 13;
+    if (anim === 'run') this.anims.timeScale = Phaser.Math.Clamp((s / ANIM.runCycleYd) * 6 / fr, 0.4, 3);
+    else if (anim === 'walk') this.anims.timeScale = Phaser.Math.Clamp((s / ANIM.walkCycleYd) * 6 / fr, 0.3, 2);
     else this.anims.timeScale = 1;
   }
 

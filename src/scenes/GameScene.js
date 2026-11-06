@@ -18,6 +18,7 @@ import { bus, EV } from '../systems/events.js';
 import { THROW_START_Z, CATCH_Z } from '../entities/Ball.js';
 import { nearest } from '../ai/OffenseAI.js';
 import { CATCHING } from '../config/catching.js';
+import { CARRIER } from '../config/speeds.js';
 import { PixelText } from '../gfx/PixelFont.js';
 
 const ROUTE_COLOR = 0xf4f4f4; // white routes
@@ -44,9 +45,9 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.onAction());
     this.input.keyboard.on('keydown-ENTER', () => this.onAction());
     this.input.keyboard.on('keydown-P', () => this.openPlaybook());
-    // ball carrier cuts: one press = one cut (no holding)
-    for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(-1));
-    for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, () => this.play?.nudge(1));
+    // ball carrier: hold UP / DOWN to steer, Shift + UP / DOWN to juke, Space to dive
+    for (const k of ['UP', 'W']) this.input.keyboard.on(`keydown-${k}`, (e) => { if (e.shiftKey) this.play?.juke(-1); });
+    for (const k of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${k}`, (e) => { if (e.shiftKey) this.play?.juke(1); });
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
     this.input.on('pointermove', (p) => this.onPointerMove(p));
     this.input.on('pointerup', (p) => this.onPointerUp(p));
@@ -150,6 +151,7 @@ export class GameScene extends Phaser.Scene {
     this.audibleUsed = audibled;
     this.play?.destroy();
     this.aim = null;
+    this.swipe = null;
     this.aimGfx.clear();
     this.play = new PlayController(this, this.gs, def);
     this.field.setLines(this.gs.ballOn, this.gs.firstDownAt);
@@ -178,6 +180,7 @@ export class GameScene extends Phaser.Scene {
 
   onAction() {
     if (this.calling || !this.play) return;
+    if (this.play.carrierUnderControl) { this.play.dive(); return; }
     if (this.play.phase === 'presnap') this.play.snap();
     else if (this.play.phase === 'dead' && this.deadTimer > 0.6) this.newPlay();
   }
@@ -205,9 +208,10 @@ export class GameScene extends Phaser.Scene {
       this.play.giveToRB();
       return;
     }
-    // ball carrier: tap above / below him to cut that way
+    // ball carrier: hold above / below him to steer (see readInput); a quick
+    // flick up / down jukes, a flick forward dives (decided on release)
     if (ph === 'run' && this.play.carrier === this.play.controlled) {
-      this.play.nudge(p.worldY < this.play.carrier.y ? -1 : 1);
+      this.swipe = { x: p.x, y: p.y, t: this.time.now, id: p.id };
       return;
     }
     // one motion: pressing snaps the ball AND starts the pull-back
@@ -223,6 +227,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   onPointerUp(p) {
+    const sw = this.swipe;
+    if (sw && sw.id === p.id) {
+      this.swipe = null;
+      const dx = p.x - sw.x;
+      const dy = p.y - sw.y;
+      const quick = this.time.now - sw.t <= CARRIER.swipeMaxMs;
+      if (quick && Math.hypot(dx, dy) >= CARRIER.swipeMinPx) {
+        if (Math.abs(dy) > Math.abs(dx)) this.play.juke(Math.sign(dy));
+        else if (dx > 0) this.play.dive();
+      }
+      return;
+    }
     if (!this.aim || p.id !== this.aim.id) return;
     const target = this.aimTarget();
     this.aim = null;
@@ -285,7 +301,9 @@ export class GameScene extends Phaser.Scene {
     const dx = (k.RIGHT.isDown || k.D.isDown ? 1 : 0) - (k.LEFT.isDown || k.A.isDown ? 1 : 0);
     const dy = (k.DOWN.isDown || k.S.isDown ? 1 : 0) - (k.UP.isDown || k.W.isDown ? 1 : 0);
     const p = this.input.activePointer;
-    const steerY = p.isDown && !this.aim ? p.worldY : null;
+    // steering: only once a press has been held a moment (a quick flick is a juke / dive)
+    const held = this.swipe && this.time.now - this.swipe.t > 90;
+    const steerY = p.isDown && !this.aim && held ? p.worldY : null;
     return { dx, dy, steerY, aiming: !!this.aim };
   }
 
