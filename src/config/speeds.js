@@ -19,7 +19,7 @@ export const MOVE = {
 };
 
 export const ANIM = {
-  runCycleYd: 1.2,      // ground covered by one full 6-frame run cycle (two ~15px steps)
+  runCycleYd: 2.0,      // ground covered by one full 6-frame run cycle (bigger = slower legs)
   walkCycleYd: 0.8,     // same for the walk cycle
   leanDeg: 6,           // forward lean at full speed
   bobFrames: [0, 1, 1, 0, 1, 1], // 1px up on the push-off frames of the run cycle
